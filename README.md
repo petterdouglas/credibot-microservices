@@ -116,7 +116,7 @@ O ambiente de produção será orquestrado via Kubernetes, rodando localmente co
 
 | Categoria | Tecnologias |
 |---|---|
-| Linguagem | Node.js / Python (a definir por serviço) |
+| Linguagem | Java / JavaScript (a definir por serviço) |
 | Mensageria | RabbitMQ ou AWS SQS |
 | Bancos de Dados | MySQL, PostgreSQL, MongoDB, Qdrant / ChromaDB |
 | IA | LangChain, OpenAI API / Gemini API |
