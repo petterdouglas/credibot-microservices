@@ -9,7 +9,7 @@
 - Petter Douglas  
 - Carlos Eduardo Ribeiro  
 - Lucca Guedes  
-- Felipe Crisóstimo  
+- Felipe Crisóstimo
 
 ---
 
