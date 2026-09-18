@@ -1,18 +1,5 @@
 # CrediBot — Proposta de Sistema Distribuído de Microcrédito Assistido por Inteligência Artificial
 
-**Disciplina:** Sistemas Distribuídos (GCC129)  
-**Instituição:** Universidade Federal de Lavras (UFLA)  
-**Tema:** Startup de Microcrédito com Assistente de IA  
-**Status:** Proposta em fase de projeto — não implementado  
-
-**Colaboradores:**  
-- Petter Douglas  
-- Carlos Eduardo Ribeiro  
-- Lucca Guedes  
-- Felipe Crisóstimo
-
----
-
 ## Contexto e Motivação
 
 O acesso ao crédito formal no Brasil ainda é um desafio estrutural para parcelas significativas da população. Segundo o Relatório de Cidadania Financeira do Banco Central do Brasil (2023), embora a universalização do acesso bancário tenha avançado — impulsionada pelo Pix e pelo Open Finance —, a qualidade da inclusão financeira permanece desigual. Populações de baixa renda frequentemente enfrentam dificuldades não apenas para obter crédito, mas para compreender os termos e as implicações dos produtos financeiros disponíveis.
@@ -46,16 +33,11 @@ Ponto único de entrada. Responsável pelo roteamento das requisições para os 
 | Loan Service | Inicia e orquestra a proposta de empréstimo; implementa CQRS | PostgreSQL |
 | Credit Analysis Service | Motor de regras de aprovação e rejeição de crédito | MongoDB |
 | AI Assistant Service | Gerencia o fluxo do modelo de linguagem (LLM) e a base vetorial | Qdrant / ChromaDB |
-
-A adoção de bancos de dados exclusivos por serviço — conhecida como *polyglot persistence* — é uma prática consolidada em arquiteturas de microsserviços. Cada banco é escolhido com base nas características do dado manipulado: relacional para dados cadastrais estruturados, documental para regras de crédito flexíveis e vetorial para recuperação semântica de documentos pelo assistente de IA.
-
 ---
 
 ### 3. Coreografia SAGA e Outbox Pattern
 
 A transação distribuída central do sistema envolve três microsserviços e é gerenciada pelo padrão SAGA na modalidade de coreografia, complementado pelo Outbox Pattern para garantia de entrega de eventos.
-
-O SAGA é um padrão para gerenciamento de transações de longa duração em sistemas distribuídos. Em vez de usar um coordenador centralizado com bloqueio de recursos (como o Two-Phase Commit), o SAGA decompõe a transação em uma sequência de transações locais, cada uma publicando um evento que aciona a próxima etapa. Em caso de falha, transações compensatórias desfazem as etapas anteriores (GARCIA-MOLINA; SALEM, 1987).
 
 **Fluxo de aprovação:**
 
@@ -75,7 +57,7 @@ Esse modelo preserva a consistência eventual do sistema sem exigir bloqueio dis
 
 O Loan Service implementa o padrão CQRS (Command Query Responsibility Segregation), separando o modelo de gravação — responsável por processar comandos de negócio com lógica de consistência — do modelo de leitura — otimizado para consultas rápidas de listagem de propostas.
 
-Essa separação permite escalar os dois modelos de forma independente conforme a demanda. Em sistemas financeiros, onde o volume de leituras tende a superar o de gravações, essa abordagem é especialmente relevante (PANDIYA; CHARANKAR, 2024).
+Essa separação permite escalar os dois modelos de forma independente conforme a demanda.
 
 ---
 
@@ -85,8 +67,6 @@ O AI Assistant Service utiliza a técnica de Retrieval-Augmented Generation (RAG
 
 **Base de conhecimento (RAG):**  
 A base do sistema conterá documentos internos (políticas de taxas, regulamentos, FAQs) indexados em um banco de dados vetorial (Qdrant ou ChromaDB). Quando o usuário realiza uma pergunta como "Quais são as taxas para empréstimos de R$ 500?", o sistema recupera os trechos relevantes dos documentos e os usa como contexto para a geração da resposta.
-
-Estudos recentes apontam que o RAG é preferível ao fine-tuning em instituições financeiras pela capacidade de incorporar dados atualizados sem retreinamento, pela transparência das respostas rastreadas a fontes específicas e pelo menor custo operacional (CHEN et al., 2024).
 
 **Ferramentas integradas via LangChain:**  
 Quando o usuário pergunta sobre o status de um empréstimo específico ("Como está meu empréstimo?"), o LangChain invoca uma Tool que realiza uma requisição REST ao Loan Service, retornando o status real da proposta ao usuário em tempo real. Isso combina a capacidade generativa do LLM com dados estruturados e atualizados do sistema.
@@ -126,22 +106,7 @@ O ambiente de produção será orquestrado via Kubernetes, rodando localmente co
 
 ---
 
-## Estado do Projeto
-
-Este repositório representa a **proposta e o planejamento arquitetural** do sistema. Nenhum microsserviço foi implementado até o momento. O desenvolvimento seguirá a ordem:
-
-- [ ] Definição dos contratos de API (OpenAPI / Protobuf)
-- [ ] Implementação do Customer Service
-- [ ] Implementação do Loan Service com CQRS
-- [ ] Implementação do Credit Analysis Service
-- [ ] Configuração da mensageria e SAGA
-- [ ] Implementação do AI Assistant Service com RAG
-- [ ] Configuração do ambiente Kubernetes
-- [ ] Testes de integração e de falha/compensação
-
----
-
-## Referências
+## Referências para escolhas no projeto
 
 BANCO CENTRAL DO BRASIL. **Relatório de Cidadania Financeira 2023**. Brasília: BCB, 2023. Disponível em: https://www.bcb.gov.br/cidadaniafinanceira. Acesso em: set. 2026.
 
