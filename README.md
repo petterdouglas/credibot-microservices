@@ -1,119 +1,120 @@
-# CrediBot — Proposta de Sistema Distribuído de Microcrédito Assistido por Inteligência Artificial
+# CrediBot — Plataforma Distribuída de Microcrédito
 
-## Contexto e Motivação
+Plataforma de microcrédito baseada em arquitetura de microsserviços distribuídos, orientada a eventos e assistida por inteligência artificial para orientação financeira e consulta em tempo real.
 
-O acesso ao crédito formal no Brasil ainda é um desafio estrutural para parcelas significativas da população. Segundo o Relatório de Cidadania Financeira do Banco Central do Brasil (2023), embora a universalização do acesso bancário tenha avançado — impulsionada pelo Pix e pelo Open Finance —, a qualidade da inclusão financeira permanece desigual. Populações de baixa renda frequentemente enfrentam dificuldades não apenas para obter crédito, mas para compreender os termos e as implicações dos produtos financeiros disponíveis.
+---
 
-Nesse cenário, o microcrédito surge como instrumento de política de inclusão, porém sua eficácia depende da clareza das informações transmitidas ao tomador. A complexidade de taxas de juros, prazos e condições de aprovação é um obstáculo real para esse público.
+## Contexto e Problema
 
-O **CrediBot** propõe uma plataforma de microcrédito que combina simplicidade operacional com um assistente de inteligência artificial capaz de orientar o usuário sobre educação financeira, acompanhar o status de suas solicitações e responder dúvidas em linguagem acessível. A arquitetura é concebida como um sistema distribuído de microsserviços, atendendo aos requisitos da disciplina GCC129.
+O acesso ao crédito formal no Brasil enfrenta desafios estruturais de inclusão e compreensão das condições financeiras por populações de baixa renda (Banco Central do Brasil, 2023). A complexidade no cálculo de taxas, prazos e regras de elegibilidade frequentemente atua como barreira de entrada.
+
+O **CrediBot** resolve esse problema ao desacoplar a esteira de análise e concessão de microcrédito em serviços especializados de alta disponibilidade, integrando um assistente conversacional fundamentado em Retrieval-Augmented Generation (RAG) que esclarece termos contratuais e consulta posições de crédito em tempo real.
 
 ---
 
 ## Arquitetura do Sistema
 
-### 1. Clientes e BFFs (Backend for Frontend)
+O sistema é construído sobre o padrão **Database per Service**, garantindo autonomia de deploy, resiliência e persistência poliglota orientada à natureza de cada domínio.
 
-**Web Client (Cliente Final)**  
-Interface voltada ao usuário final. Permite solicitar microcrédito, acompanhar o status da proposta e interagir com o assistente de IA. Por razões de segurança, dados sensíveis de análise de risco não trafegam por essa camada.
+### Visão Geral de Componentes
 
-**Painel Admin (Backoffice)**  
-Interface para funcionários responsáveis pela revisão manual de propostas que não foram aprovadas ou rejeitadas automaticamente pelo motor de análise. Exibe métricas detalhadas de operação.
+A topologia de rede, pontos de entrada e distribuição de responsabilidades estão ilustrados a seguir:
 
-**API Gateway**  
-Ponto único de entrada. Responsável pelo roteamento das requisições para os BFFs corretos e pela aplicação de Rate Limiting, protegendo os serviços internos de sobrecarga.
+![Diagrama de Componentes](docs/img/diagrama_componentes.png)
 
----
+#### 1. Roteamento de Entrada e BFFs
+- **API Gateway (Kong / Nginx):** Ponto único de terminação de tráfego externo. Responsável pelo *JWT Offloading* e aplicação de políticas de *Rate Limiting* (protegendo a infraestrutura interna e contendo custos operacionais com provedores de LLM).
+  - Rotas `/web/*` ➔ direcionadas ao **Web BFF**.
+  - Rotas `/admin/*` ➔ direcionadas ao **Admin BFF**.
+- **Web BFF (Node.js):** Camada de agregação de dados para clientes finais. Filtra dados analíticos sensíveis, entregando payloads otimizados para consumo em redes móveis.
+- **Admin BFF (Node.js):** Interface de backoffice para analistas de crédito. Expõe auditoria completa de risco, logs de execução do motor de decisão e métricas transacionais.
 
-### 2. Microsserviços de Domínio
+#### 2. Microsserviços de Domínio
 
-| Microsserviço | Responsabilidade | Banco de Dados |
-|---|---|---|
-| Customer Service | Gerencia dados cadastrais do cliente e saldo da carteira virtual | MySQL |
-| Loan Service | Inicia e orquestra a proposta de empréstimo; implementa CQRS | PostgreSQL |
-| Credit Analysis Service | Motor de regras de aprovação e rejeição de crédito | MongoDB |
-| AI Assistant Service | Gerencia o fluxo do modelo de linguagem (LLM) e a base vetorial | Qdrant / ChromaDB |
----
-
-### 3. Coreografia SAGA e Outbox Pattern
-
-A transação distribuída central do sistema envolve três microsserviços e é gerenciada pelo padrão SAGA na modalidade de coreografia, complementado pelo Outbox Pattern para garantia de entrega de eventos.
-
-**Fluxo de aprovação:**
-
-1. O **Loan Service** cria a proposta com status `PENDING`. Usando o Outbox Pattern, registra o evento `PropostaCriada` na própria base de dados antes de publicá-lo na fila de mensagens (ex: RabbitMQ), garantindo atomicidade local.
-2. O **Credit Analysis Service** consome o evento, executa as regras de análise e publica `CreditoAprovado`.
-3. O **Customer Service** consome a aprovação e deposita o valor na carteira virtual do cliente.
-
-**Fluxo de compensação (cenário de falha):**
-
-Caso o Customer Service detecte que não pode concluir o depósito (ex: conta bloqueada por suspeita de fraude), ele publica o evento `FalhaDeposito`. O Loan Service escuta esse evento e executa a transação compensatória, alterando o status do empréstimo para `CANCELED_DUE_TO_ERROR`.
-
-Esse modelo preserva a consistência eventual do sistema sem exigir bloqueio distribuído de recursos, o que seria inviável em escala.
+| Serviço | Domínio | Persistência | Justificativa |
+| :--- | :--- | :--- | :--- |
+| **Loan Service** | Máquina de estados do ciclo de vida do empréstimo | PostgreSQL | Integridade relacional ACID, suporte a colunas JSONB e base para o Outbox Pattern. |
+| **Customer Service** | Cadastro, conformidade KYC e saldo da carteira virtual | MySQL | Consistência relacional para transações de saldo e dados cadastrais. |
+| **Credit Analysis Service** | Motor assíncrono de score e regras de crédito | MongoDB | Modelo documental para persistência de snapshots de risco variáveis e auditoria de regras. |
+| **AI Assistant Service** | Processamento de linguagem natural e pipeline RAG | ChromaDB | Banco vetorial otimizado para busca por similaridade semântica de embeddings. |
 
 ---
 
-### 4. CQRS no Loan Service
+### Transação Distribuída: SAGA Coreografada e Outbox Pattern
 
-O Loan Service implementa o padrão CQRS (Command Query Responsibility Segregation), separando o modelo de gravação — responsável por processar comandos de negócio com lógica de consistência — do modelo de leitura — otimizado para consultas rápidas de listagem de propostas.
+A concessão de crédito abrange três serviços distintos e opera sob o padrão **SAGA por Coreografia**. A consistência entre a escrita local e o envio de eventos no `Loan Service` é garantida via **Outbox Pattern**, evitando inconsistências causadas por *Dual Write*.
 
-Essa separação permite escalar os dois modelos de forma independente conforme a demanda.
+![Diagrama de Sequência - SAGA](docs/img/diagrama_sequencia.png)
 
----
-
-### 5. Assistente de IA com RAG e LangChain
-
-O AI Assistant Service utiliza a técnica de Retrieval-Augmented Generation (RAG) para fundamentar as respostas do modelo de linguagem em documentos próprios da plataforma, reduzindo o risco de alucinações e aumentando a rastreabilidade das informações fornecidas ao usuário.
-
-**Base de conhecimento (RAG):**  
-A base do sistema conterá documentos internos (políticas de taxas, regulamentos, FAQs) indexados em um banco de dados vetorial (Qdrant ou ChromaDB). Quando o usuário realiza uma pergunta como "Quais são as taxas para empréstimos de R$ 500?", o sistema recupera os trechos relevantes dos documentos e os usa como contexto para a geração da resposta.
-
-**Ferramentas integradas via LangChain:**  
-Quando o usuário pergunta sobre o status de um empréstimo específico ("Como está meu empréstimo?"), o LangChain invoca uma Tool que realiza uma requisição REST ao Loan Service, retornando o status real da proposta ao usuário em tempo real. Isso combina a capacidade generativa do LLM com dados estruturados e atualizados do sistema.
-
-**Resiliência:**  
-Como provedores de LLM (OpenAI, Gemini) podem ficar indisponíveis, o serviço implementa Circuit Breaker com Fallback: em caso de falha, o sistema retorna uma mensagem amigável ao usuário sem propagar o erro para outras partes do sistema.
+#### Fluxo de Execução:
+1. **Início da Proposta:** O `Loan Service` registra a solicitação com status `PENDING` e insere o evento em sua tabela de outbox na mesma transação atômica. Um worker lê o outbox e publica o evento `LoanCreatedEvent` no Message Broker.
+2. **Motor de Risco:** O `Credit Analysis Service` consome o evento, executa as políticas de score e publica `CreditApprovedEvent` (ou `CreditRejectedEvent`).
+3. **Depósito na Carteira (Caminho Feliz):** O `Customer Service` consome a aprovação, valida o status da conta e credita o valor na carteira virtual, emitindo `DepositSuccessEvent`. O `Loan Service` consome o evento e altera o status para `APPROVED`.
+4. **Transação Compensatória (Cenário de Falha):** Caso o `Customer Service` rejeite o depósito (e.g., conta bloqueada por suspeita de fraude via KYC), ele publica `DepositFailedEvent`. O `Loan Service` consome o evento compensatório e executa a compensação, atualizando o empréstimo para `CANCELED_DUE_TO_ERROR`.
 
 ---
 
-### 6. Infraestrutura
+### CQRS (Command Query Responsibility Segregation)
 
-**Docker:**  
-Cada microsserviço possui um `Dockerfile` multi-stage, minimizando o tamanho da imagem final. Um arquivo `docker-compose.yml` orquestra o ambiente de desenvolvimento completo, incluindo os bancos de dados e a infraestrutura de mensageria.
-
-**Kubernetes:**  
-O ambiente de produção será orquestrado via Kubernetes, rodando localmente com Minikube ou k3d. Os recursos previstos são:
-
-- `Deployment` para cada microsserviço
-- `Service` para exposição interna
-- `ConfigMap` para variáveis de configuração não sensíveis
-- `Secret` para chaves de API (OpenAI, etc.)
-- `Ingress` para roteamento externo
+Aplicado no **Loan Service** para desacoplar operações transacionais de escrita de consultas de alta frequência:
+- **Write Model:** Processa comandos de criação e alterações de status de propostas no PostgreSQL, garantindo integridade estrita.
+- **Read Model:** Tabela desnormalizada otimizada para leituras paginadas e buscas textuais rápidas, sincronizada de forma assíncrona com tolerância a defasagem (lag) de 1 a 3 segundos (consistência eventual).
 
 ---
 
-## Tecnologias Previstas
+### Módulo de IA: RAG e Integração via Tools
 
-| Categoria | Tecnologias |
-|---|---|
-| Linguagem | Java / JavaScript (a definir por serviço) |
-| Mensageria | RabbitMQ ou AWS SQS |
-| Bancos de Dados | MySQL, PostgreSQL, MongoDB, Qdrant / ChromaDB |
-| IA | LangChain, OpenAI API / Gemini API |
-| Containers | Docker, Docker Compose |
-| Orquestração | Kubernetes (Minikube / k3d) |
-| Gateway | Kong / Nginx |
+O **AI Assistant Service** funciona de forma desacoplada da mensageria transacional:
+- **RAG (Retrieval-Augmented Generation):** Manuais de crédito e regulamentos de taxas são vetorizados no ChromaDB. Perguntas do usuário recuperam os trechos mais aderentes como contexto antes do envio ao modelo, reduzindo alucinações.
+- **LangChain Tools:** Dúvidas sobre status de empréstimo disparam uma Tool síncrona que executa requisição REST direta contra o modelo de leitura do `Loan Service`, retornando informações consolidadas em tempo real.
+- **Tolerância a Falhas:** Chamadas externas a provedores de LLM implementam *Circuit Breaker*, *Timeouts* e *Fallback* gracioso em caso de indisponibilidade remota.
 
 ---
 
-## Referências para escolhas no projeto
+## Contratos de Interface
 
-BANCO CENTRAL DO BRASIL. **Relatório de Cidadania Financeira 2023**. Brasília: BCB, 2023. Disponível em: https://www.bcb.gov.br/cidadaniafinanceira. Acesso em: set. 2026.
+A especificação detalhada de contratos REST, códigos HTTP, HATEOAS e RFC 7807 (Problem Details) está centralizada no diretório [`/docs`](docs/):
 
-CHEN, Yupeng et al. **Retrieval-Augmented Generation for Financial Question Answering: Challenges and Approaches**. arXiv preprint, 2024. Disponível em: https://arxiv.org/abs/2401.06080. Acesso em: set. 2026.
+- [`docs/contratos_rotas.pdf`](docs/contratos_rotas.pdf) — Especificação dos endpoints de cada microsserviço e BFF.
 
-GARCIA-MOLINA, Hector; SALEM, Kenneth. **Sagas**. ACM SIGMOD Record, v. 16, n. 3, p. 249-259, 1987. Disponível em: https://dl.acm.org/doi/10.1145/38714.38742. Acesso em: set. 2026.
+---
 
-PANDIYA, R.; CHARANKAR, N. **Optimizing Performance and Scalability in Micro Services with CQRS Design**. ResearchGate, maio 2024. Disponível em: https://www.researchgate.net/publication/381069724. Acesso em: set. 2026.
+## Stack Tecnológica
 
-RICHARDSON, Chris. **Microservices Patterns: With Examples in Java**. Manning Publications, 2018. Referência padrão para os padrões SAGA, Outbox e CQRS em arquiteturas de microsserviços.
+- **Linguagens:** Java 21 (Spring Boot), TypeScript (Node.js)
+- **Mensageria:** RabbitMQ
+- **Bancos de Dados:** PostgreSQL, MySQL, MongoDB, ChromaDB
+- **IA & Frameworks:** LangChain, OpenAI / Gemini API
+- **Infraestrutura:** Docker, Docker Compose, Kubernetes (Minikube / k3d)
+- **Gateways:** Kong / Nginx
+- **Padrão de Commits:** [Conventional Commits](https://www.conventionalcommits.org/)
+
+---
+
+## Instruções de Execução
+
+### Pré-requisitos
+- Docker Engine `>= 24.0` e Docker Compose `>= 2.20`
+
+### Inicialização do Ambiente
+```bash
+# 1. Clonar repositório
+git clone https://github.com/petterdouglas/credibot-microservices.git
+cd credibot-microservices
+
+# 2. Subir bancos de dados, broker e microsserviços
+docker compose up -d --build
+
+# 3. Monitorar status dos containers
+docker compose ps
+```
+
+---
+
+## Referências
+
+- BANCO CENTRAL DO BRASIL. **Relatório de Cidadania Financeira 2023**. Brasília: BCB, 2023. Disponível em: <https://www.bcb.gov.br/cidadaniafinanceira>.
+- CHEN, Yupeng et al. **Retrieval-Augmented Generation for Financial Question Answering: Challenges and Approaches**. arXiv preprint, 2024. Disponível em: <https://arxiv.org/abs/2401.06080>.
+- GARCIA-MOLINA, Hector; SALEM, Kenneth. **Sagas**. ACM SIGMOD Record, v. 16, n. 3, p. 249-259, 1987. Disponível em: <https://dl.acm.org/doi/10.1145/38714.38742>.
+- PANDIYA, R.; CHARANKAR, N. **Optimizing Performance and Scalability in Micro Services with CQRS Design**. ResearchGate, maio 2024. Disponível em: <https://www.researchgate.net/publication/381069724>.
+- RICHARDSON, Chris. **Microservices Patterns: With Examples in Java**. Manning Publications, 2018.
