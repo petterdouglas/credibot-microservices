@@ -11,6 +11,7 @@ resources:
   - gateway/configmap.yaml
   - gateway/deployment.yaml
   - gateway/service.yaml
+  - gateway/ingress.yaml
 
   # Web BFF
   - bffs/web-bff/deployment.yaml
