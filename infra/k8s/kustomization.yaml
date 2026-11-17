@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: credibot
+
+resources:
+  # Namespace
+  - namespace.yaml
+
+  # API Gateway
+  - gateway/configmap.yaml
+  - gateway/deployment.yaml
+  - gateway/service.yaml
+
+  # Web BFF
+  - bffs/web-bff/deployment.yaml
+  - bffs/web-bff/service.yaml
+
+  # Admin BFF
+  - bffs/admin-bff/deployment.yaml
+  - bffs/admin-bff/service.yaml
+
+# ---------------------------------------------------------------------------
+# Uso:
+#   kubectl apply -k infra/k8s/
+#
+# Verificar:
+#   kubectl get pods -n credibot
+#   kubectl get svc  -n credibot
+#
+# Health checks (Minikube — substituir <node-ip> pelo IP do nó):
+#   curl http://<node-ip>:30080/health
+#   curl http://<node-ip>:30080/web/health
+#   curl http://<node-ip>:30080/admin/health
+# ---------------------------------------------------------------------------

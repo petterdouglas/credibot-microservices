@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: credibot
+  labels:
+    app: gateway
+    component: api-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+        component: api-gateway
+    spec:
+      # -----------------------------------------------------------------------
+      # Aguarda os BFFs estarem prontos antes de iniciar o gateway.
+      # Em K8s, a resolução DNS funciona por nome de Service (web-bff, admin-bff).
+      # -----------------------------------------------------------------------
+      initContainers:
+        - name: wait-for-web-bff
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until wget -qO- http://web-bff:3001/health > /dev/null 2>&1; do
+                echo "Aguardando web-bff..."; sleep 3;
+              done
+        - name: wait-for-admin-bff
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until wget -qO- http://admin-bff:3002/health > /dev/null 2>&1; do
+                echo "Aguardando admin-bff..."; sleep 3;
+              done
+      containers:
+        - name: gateway
+          image: credibot-microservices-gateway:latest
+          # Em produção: image: <registry>/credibot-gateway:<tag>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: gateway-nginx-config

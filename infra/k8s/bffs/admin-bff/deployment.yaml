@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-bff
+  namespace: credibot
+  labels:
+    app: admin-bff
+    component: bff
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: admin-bff
+  template:
+    metadata:
+      labels:
+        app: admin-bff
+        component: bff
+    spec:
+      containers:
+        - name: admin-bff
+          image: credibot-microservices-admin-bff:latest
+          # Em produção: image: <registry>/credibot-admin-bff:<tag>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3002
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "3002"
+            - name: NODE_ENV
+              value: "production"
+            # URLs dos microsserviços — resolvidas pelo DNS interno do K8s.
+            - name: LOAN_SERVICE_URL
+              value: "http://loan-service.credibot.svc.cluster.local:8081"
+            - name: CUSTOMER_SERVICE_URL
+              value: "http://customer-service.credibot.svc.cluster.local:8082"
+            - name: CREDIT_ANALYSIS_URL
+              value: "http://credit-analysis-service.credibot.svc.cluster.local:8083"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false

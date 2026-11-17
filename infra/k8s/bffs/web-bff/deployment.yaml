@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-bff
+  namespace: credibot
+  labels:
+    app: web-bff
+    component: bff
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-bff
+  template:
+    metadata:
+      labels:
+        app: web-bff
+        component: bff
+    spec:
+      containers:
+        - name: web-bff
+          image: credibot-microservices-web-bff:latest
+          # Em produção: image: <registry>/credibot-web-bff:<tag>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3001
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "3001"
+            - name: NODE_ENV
+              value: "production"
+            # URLs dos microsserviços — resolvidas pelo DNS interno do K8s.
+            # Formato: http://<service-name>.<namespace>.svc.cluster.local:<port>
+            - name: LOAN_SERVICE_URL
+              value: "http://loan-service.credibot.svc.cluster.local:8081"
+            - name: CUSTOMER_SERVICE_URL
+              value: "http://customer-service.credibot.svc.cluster.local:8082"
+            - name: AI_ASSISTANT_URL
+              value: "http://ai-assistant-service.credibot.svc.cluster.local:3003"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          # Usuário não-root (uid 1000 = node, definido no Dockerfile)
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false

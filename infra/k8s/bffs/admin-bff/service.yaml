@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-bff
+  namespace: credibot
+  labels:
+    app: admin-bff
+    component: bff
+spec:
+  # ClusterIP: acesso apenas interno (gateway → admin-bff).
+  # O admin-bff não é exposto diretamente fora do cluster.
+  type: ClusterIP
+  selector:
+    app: admin-bff
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3002
+      targetPort: 3002
