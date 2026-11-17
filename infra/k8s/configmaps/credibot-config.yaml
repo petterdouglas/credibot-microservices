@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: credibot-config
+  namespace: credibot
+data:
+  SERVER_ADDRESS: "0.0.0.0"
+  POSTGRES_DB: "credibot_loan"
+  MYSQL_DATABASE: "credibot_customer"
+  MONGO_DB: "credibot_credit"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_VHOST: "/"
+  LOAN_SERVICE_URL: "http://loan-service:8081"
+  CUSTOMER_SERVICE_URL: "http://customer-service:8082"
+  CREDIT_ANALYSIS_URL: "http://credit-analysis-service:8083"
+  AI_ASSISTANT_URL: "http://ai-assistant-service:3003"
+  CHROMA_URL: "http://chromadb:8000"
+  LLM_PROVIDER: "gemini"

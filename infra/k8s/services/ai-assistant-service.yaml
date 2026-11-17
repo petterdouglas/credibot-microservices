@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-assistant-service
+  namespace: credibot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-assistant-service
+  template:
+    metadata:
+      labels:
+        app: ai-assistant-service
+    spec:
+      containers:
+        - name: ai-assistant-service
+          image: credibot-microservices-ai-assistant-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3003
+          env:
+            - name: PORT
+              value: "3003"
+            - name: CHROMA_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: credibot-config
+                  key: CHROMA_URL
+            - name: LOAN_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: credibot-config
+                  key: LOAN_SERVICE_URL
+            - name: LLM_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: credibot-config
+                  key: LLM_PROVIDER
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: credibot-secrets
+                  key: LLM_API_KEY
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            initialDelaySeconds: 15
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-assistant-service
+  namespace: credibot
+spec:
+  selector:
+    app: ai-assistant-service
+  ports:
+    - port: 3003
+      targetPort: 3003

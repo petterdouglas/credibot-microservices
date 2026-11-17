@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-bff
+  namespace: credibot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-bff
+  template:
+    metadata:
+      labels:
+        app: admin-bff
+    spec:
+      containers:
+        - name: admin-bff
+          image: credibot-microservices-admin-bff:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3002
+          env:
+            - name: PORT
+              value: "3002"
+            - name: LOAN_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: credibot-config
+                  key: LOAN_SERVICE_URL
+            - name: CUSTOMER_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: credibot-config
+                  key: CUSTOMER_SERVICE_URL
+            - name: CREDIT_ANALYSIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: credibot-config
+                  key: CREDIT_ANALYSIS_URL
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 15
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-bff
+  namespace: credibot
+spec:
+  selector:
+    app: admin-bff
+  ports:
+    - port: 3002
+      targetPort: 3002
