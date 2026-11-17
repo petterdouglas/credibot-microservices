@@ -1,0 +1,22 @@
+# Environment variables
+.env
+.env.local
+
+# Java / Maven
+target/
+*.jar
+*.war
+*.class
+.mvn/timing.properties
+
+# Node.js / TypeScript
+node_modules/
+dist/
+npm-debug.log*
+
+# IDEs & OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

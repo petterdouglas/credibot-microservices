@@ -1,0 +1,97 @@
+{
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "credibot.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "credit.analysis.loan-created.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "customer.deposit.credit-approved.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "loan.saga.credit-rejected.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "loan.saga.deposit-success.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "loan.saga.deposit-failed.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "credibot.events",
+      "vhost": "/",
+      "destination": "credit.analysis.loan-created.queue",
+      "destination_type": "queue",
+      "routing_key": "loan.created",
+      "arguments": {}
+    },
+    {
+      "source": "credibot.events",
+      "vhost": "/",
+      "destination": "customer.deposit.credit-approved.queue",
+      "destination_type": "queue",
+      "routing_key": "credit.approved",
+      "arguments": {}
+    },
+    {
+      "source": "credibot.events",
+      "vhost": "/",
+      "destination": "loan.saga.credit-rejected.queue",
+      "destination_type": "queue",
+      "routing_key": "credit.rejected",
+      "arguments": {}
+    },
+    {
+      "source": "credibot.events",
+      "vhost": "/",
+      "destination": "loan.saga.deposit-success.queue",
+      "destination_type": "queue",
+      "routing_key": "deposit.success",
+      "arguments": {}
+    },
+    {
+      "source": "credibot.events",
+      "vhost": "/",
+      "destination": "loan.saga.deposit-failed.queue",
+      "destination_type": "queue",
+      "routing_key": "deposit.failed",
+      "arguments": {}
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+README.md
+Descricao_Trabalho_Pratico.pdf
+docs/
+infra/k8s/
+**/target/
+**/node_modules/
+**/dist/
+**/*.log

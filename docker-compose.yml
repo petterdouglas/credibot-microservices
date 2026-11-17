@@ -1,0 +1,276 @@
+services:
+  # Camada de Borda (API Gateway)
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: credibot-gateway
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    depends_on:
+      web-bff:
+        condition: service_healthy
+      admin-bff:
+        condition: service_healthy
+    networks:
+      - edge-net
+    restart: unless-stopped
+
+  # Camada BFF (Backend for Frontend)
+  web-bff:
+    build:
+      context: ./bffs/web-bff
+      dockerfile: Dockerfile
+    container_name: credibot-web-bff
+    environment:
+      PORT: 3001
+      LOAN_SERVICE_URL: http://loan-service:8081
+      CUSTOMER_SERVICE_URL: http://customer-service:8082
+      AI_ASSISTANT_URL: http://ai-assistant-service:3003
+    depends_on:
+      loan-service:
+        condition: service_healthy
+      customer-service:
+        condition: service_healthy
+      ai-assistant-service:
+        condition: service_healthy
+    networks:
+      - edge-net
+      - services-net
+    restart: unless-stopped
+
+  admin-bff:
+    build:
+      context: ./bffs/admin-bff
+      dockerfile: Dockerfile
+    container_name: credibot-admin-bff
+    environment:
+      PORT: 3002
+      LOAN_SERVICE_URL: http://loan-service:8081
+      CUSTOMER_SERVICE_URL: http://customer-service:8082
+      CREDIT_ANALYSIS_URL: http://credit-analysis-service:8083
+    depends_on:
+      loan-service:
+        condition: service_healthy
+      customer-service:
+        condition: service_healthy
+      credit-analysis-service:
+        condition: service_healthy
+    networks:
+      - edge-net
+      - services-net
+    restart: unless-stopped
+
+  # Microsservicos de Dominio
+  loan-service:
+    build:
+      context: ./services/loan-service
+      dockerfile: Dockerfile
+    container_name: credibot-loan-service
+    environment:
+      SERVER_PORT: 8081
+      SERVER_ADDRESS: 0.0.0.0
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - services-net
+      - data-net
+    restart: unless-stopped
+
+  customer-service:
+    build:
+      context: ./services/customer-service
+      dockerfile: Dockerfile
+    container_name: credibot-customer-service
+    environment:
+      SERVER_PORT: 8082
+      SERVER_ADDRESS: 0.0.0.0
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - services-net
+      - data-net
+    restart: unless-stopped
+
+  credit-analysis-service:
+    build:
+      context: ./services/credit-analysis-service
+      dockerfile: Dockerfile
+    container_name: credibot-credit-analysis-service
+    environment:
+      SERVER_PORT: 8083
+      SERVER_ADDRESS: 0.0.0.0
+      MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_DB}?authSource=admin
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - services-net
+      - data-net
+    restart: unless-stopped
+
+  ai-assistant-service:
+    build:
+      context: ./services/ai-assistant-service
+      dockerfile: Dockerfile
+    container_name: credibot-ai-assistant-service
+    environment:
+      PORT: 3003
+      CHROMA_URL: http://chromadb:8000
+      LOAN_SERVICE_URL: http://loan-service:8081
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    networks:
+      - services-net
+      - data-net
+    restart: unless-stopped
+
+  # Camada de Dados e Mensageria (Rede Interna Isolada)
+  postgres:
+    build:
+      context: ./infra/docker/postgres
+      dockerfile: Dockerfile
+    container_name: credibot-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  mysql:
+    build:
+      context: ./infra/docker/mysql
+      dockerfile: Dockerfile
+    container_name: credibot-mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  mongodb:
+    build:
+      context: ./infra/docker/mongodb
+      dockerfile: Dockerfile
+    container_name: credibot-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval \"db.adminCommand('ping')\" --quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  chromadb:
+    build:
+      context: ./infra/docker/chromadb
+      dockerfile: Dockerfile
+    container_name: credibot-chromadb
+    volumes:
+      - chromadb_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/heartbeat')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 40s
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  rabbitmq:
+    build:
+      context: ./infra/docker/rabbitmq
+      dockerfile: Dockerfile
+    container_name: credibot-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 15s
+      retries: 8
+      start_period: 40s
+    networks:
+      - data-net
+    restart: unless-stopped
+
+# Volumes Nomeados (Persistencia Database per Service)
+volumes:
+  postgres_data:
+  mysql_data:
+  mongodb_data:
+  chromadb_data:
+  rabbitmq_data:
+
+# Redes Isoladas por Camada
+networks:
+  edge-net:
+    driver: bridge
+  services-net:
+    driver: bridge
+  data-net:
+    driver: bridge
+    internal: true

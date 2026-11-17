@@ -102,10 +102,13 @@ A especificação detalhada de contratos REST, códigos HTTP, HATEOAS e RFC 7807
 git clone https://github.com/petterdouglas/credibot-microservices.git
 cd credibot-microservices
 
-# 2. Subir bancos de dados, broker e microsserviços
+# 2. Configurar variáveis de ambiente
+cp .env.example .env
+
+# 3. Subir bancos de dados, broker, microsserviços, BFFs e gateway
 docker compose up -d --build
 
-# 3. Monitorar status dos containers
+# 4. Monitorar status dos containers
 docker compose ps
 ```
 

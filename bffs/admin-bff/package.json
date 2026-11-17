@@ -1,0 +1,14 @@
+{
+  "name": "admin-bff",
+  "version": "0.1.0",
+  "description": "CrediBot Admin BFF — Painel Analítico e Auditoria",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "typescript": "^5.6.3"
+  }
+}
