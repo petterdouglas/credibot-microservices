@@ -39,6 +39,12 @@ spec:
               value: "http://customer-service.credibot.svc.cluster.local:8082"
             - name: AI_ASSISTANT_URL
               value: "http://ai-assistant-service.credibot.svc.cluster.local:3003"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: credibot-jwt
+                  key: JWT_SECRET
+                  optional: true   # sem secret = modo compatibilidade (sem verificação)
           livenessProbe:
             httpGet:
               path: /health

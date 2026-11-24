@@ -38,6 +38,12 @@ spec:
               value: "http://customer-service.credibot.svc.cluster.local:8082"
             - name: CREDIT_ANALYSIS_URL
               value: "http://credit-analysis-service.credibot.svc.cluster.local:8083"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: credibot-jwt
+                  key: JWT_SECRET
+                  optional: true   # sem secret = modo compatibilidade (sem verificação)
           livenessProbe:
             httpGet:
               path: /health

@@ -21,6 +21,9 @@ resources:
   - bffs/admin-bff/deployment.yaml
   - bffs/admin-bff/service.yaml
 
+  # Segredos compartilhados entre BFFs
+  - bffs/jwt-secret.yaml
+
 # ---------------------------------------------------------------------------
 # Uso:
 #   kubectl apply -k infra/k8s/

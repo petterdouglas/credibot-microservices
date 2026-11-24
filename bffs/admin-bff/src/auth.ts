@@ -1,21 +1,18 @@
 // ============================================================================
 // CrediBot Admin BFF — Middleware de autenticação e autorização
 //
-// NOTA ARQUITETURAL:
-//   Não existe auth-service, JWKS endpoint nem role-based access control
-//   centralizado no repositório atual. Este middleware:
-//     1. Exige que o header Authorization esteja presente e seja Bearer.
-//     2. Decodifica o payload JWT (SEM verificar assinatura — limitação
-//        conhecida, documentada aqui).
-//     3. Verifica que o campo `role` do token contenha "admin" ou "analyst".
-//        Este é o único controle de acesso possível sem um auth-service real.
+// Validação do JWT:
+//   - Se JWT_SECRET estiver definido no ambiente: valida a assinatura
+//     criptográfica com jsonwebtoken (jwt.verify). Esta é a operação segura.
+//   - Se JWT_SECRET não estiver definido: modo de compatibilidade — apenas
+//     decodifica o payload base64 sem verificar assinatura. Um aviso é logado
+//     a cada inicialização. Use apenas em desenvolvimento/integração.
 //
-//   LIMITAÇÃO CONHECIDA: a validação criptográfica da assinatura e a
-//   revogação de tokens dependem de um JWT_SECRET ou JWKS_URI que ainda
-//   não existe na arquitetura. Quando disponíveis, substituir a decodificação
-//   base64 por uma biblioteca de verificação JWT (ex: jose, jsonwebtoken).
+//   Além da autenticação, verifica que o campo `role` do token
+//   contenha "admin" ou "analyst" — acesso negado caso contrário (403).
 // ============================================================================
 import { Request, Response, NextFunction } from "express";
+import jwt, { JwtPayload as JwtLibPayload, JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { sendProblem } from "./errors.js";
 import { JwtPayload } from "./types.js";
 
@@ -30,9 +27,19 @@ declare global {
   }
 }
 
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.warn(
+    "[auth] AVISO: JWT_SECRET não definido. Validação de assinatura desativada. " +
+    "Tokens não são verificados criptograficamente. NÃO use em produção."
+  );
+}
+
 /**
- * Exige token JWT com role administrativa.
- * Rejeita requests sem token, com token mal-formado ou sem role permitida.
+ * Exige token JWT com role administrativa (admin ou analyst).
+ * Com JWT_SECRET definido: verifica assinatura, expiração e estrutura.
+ * Sem JWT_SECRET: decodifica apenas (modo compatibilidade).
  */
 export function requireAdminAuth(
   req: Request,
@@ -53,8 +60,47 @@ export function requireAdminAuth(
   }
 
   const token = authHeader.slice(7);
-  const parts = token.split(".");
 
+  // ── Modo seguro: verificação criptográfica ──────────────────────────────
+  if (JWT_SECRET) {
+    let payload: JwtLibPayload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET) as JwtLibPayload;
+    } catch (err) {
+      if (err instanceof TokenExpiredError) {
+        sendProblem(res, 401, "Unauthorized", "Token expirado.", req);
+      } else if (err instanceof JsonWebTokenError) {
+        sendProblem(res, 401, "Unauthorized", "Token JWT inválido ou assinatura incorreta.", req);
+      } else {
+        sendProblem(res, 401, "Unauthorized", "Não foi possível validar o token JWT.", req);
+      }
+      return;
+    }
+
+    if (!payload.sub) {
+      sendProblem(res, 401, "Unauthorized", "Token não contém identificador de usuário (sub).", req);
+      return;
+    }
+
+    const role = ((payload["role"] as string) ?? "").toLowerCase();
+    if (!ALLOWED_ROLES.has(role)) {
+      sendProblem(
+        res,
+        403,
+        "Forbidden",
+        "Acesso negado. Este painel requer perfil administrativo (admin ou analyst).",
+        req
+      );
+      return;
+    }
+
+    req.jwtPayload = { sub: payload.sub, role };
+    next();
+    return;
+  }
+
+  // ── Modo compatibilidade: decodificação base64 sem verificação ──────────
+  const parts = token.split(".");
   if (parts.length !== 3) {
     sendProblem(res, 401, "Unauthorized", "Token JWT mal-formado.", req);
     return;
@@ -68,18 +114,10 @@ export function requireAdminAuth(
     const payload = JSON.parse(payloadJson) as JwtPayload;
 
     if (!payload.sub) {
-      sendProblem(
-        res,
-        401,
-        "Unauthorized",
-        "Token não contém identificador de usuário (sub).",
-        req
-      );
+      sendProblem(res, 401, "Unauthorized", "Token não contém identificador de usuário (sub).", req);
       return;
     }
 
-    // Verificação de role administrativa.
-    // Sem auth-service real, esta é a única barreira de autorização possível.
     const role = (payload.role ?? "").toLowerCase();
     if (!ALLOWED_ROLES.has(role)) {
       sendProblem(
@@ -95,12 +133,6 @@ export function requireAdminAuth(
     req.jwtPayload = payload;
     next();
   } catch {
-    sendProblem(
-      res,
-      401,
-      "Unauthorized",
-      "Não foi possível decodificar o token JWT.",
-      req
-    );
+    sendProblem(res, 401, "Unauthorized", "Não foi possível decodificar o token JWT.", req);
   }
 }
