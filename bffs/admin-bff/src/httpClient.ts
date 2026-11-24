@@ -1,7 +1,3 @@
-// ============================================================================
-// CrediBot Admin BFF — Cliente HTTP para microsserviços
-// (mesma estratégia do Web BFF — usa fetch nativo do Node 18+)
-// ============================================================================
 import { UpstreamError } from "./errors.js";
 
 export interface FetchOptions {

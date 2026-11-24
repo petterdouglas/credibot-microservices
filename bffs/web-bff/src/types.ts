@@ -1,21 +1,14 @@
-// ============================================================================
-// CrediBot Web BFF — Tipos compartilhados
-// ============================================================================
-
-/** Payload decodificado do JWT (propagado pelo header Authorization). */
 export interface JwtPayload {
-  sub: string;       // customerId (ex: "C-1122")
+  sub: string;
   name?: string;
   email?: string;
   iat?: number;
   exp?: number;
 }
 
-// ---------------------------------------------------------------------------
-// Respostas dos microsserviços (contratos internos)
-// ---------------------------------------------------------------------------
+// Respostas dos microsserviços
 
-/** Loan Service — POST /api/v1/loans (201) */
+/** Loan Service — POST /api/v1/loans */
 export interface LoanCreatedResponse {
   id: string;
   customerId: string;
@@ -26,7 +19,7 @@ export interface LoanCreatedResponse {
   _links?: Record<string, { href: string; method: string }>;
 }
 
-/** Loan Service — GET /api/v1/loans?customerId=&status=&page=&size= */
+/** Loan Service — GET /api/v1/loans */
 export interface LoanListResponse {
   content: Array<{
     id: string;
@@ -46,8 +39,8 @@ export interface CustomerProfileResponse {
   id: string;
   name: string;
   email: string;
-  cpf?: string;           // campo sensível — nunca repassar ao cliente web
-  monthlyIncome?: number; // campo sensível — nunca repassar ao cliente web
+  cpf?: string;           // campo sensível — não repassar ao cliente web
+  monthlyIncome?: number; // campo sensível — não repassar ao cliente web
   kycStatus: string;
   accountBlocked: boolean;
 }
@@ -66,9 +59,7 @@ export interface AiChatUpstreamResponse {
   toolsInvoked?: string[];
 }
 
-// ---------------------------------------------------------------------------
-// Payloads do Web BFF (respostas entregues ao frontend)
-// ---------------------------------------------------------------------------
+// Payloads entregues ao frontend
 
 /** GET /dashboard */
 export interface DashboardPayload {
@@ -96,9 +87,7 @@ export interface ChatPayload {
   reply: string;
 }
 
-// ---------------------------------------------------------------------------
-// Erro RFC 7807 — Problem Details
-// ---------------------------------------------------------------------------
+// RFC 7807 Problem Details
 export interface ProblemDetail {
   type: string;
   title: string;

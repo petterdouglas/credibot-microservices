@@ -1,21 +1,8 @@
-// ============================================================================
-// CrediBot Web BFF — Middleware de autenticação
-//
-// Validação do JWT:
-//   - Se JWT_SECRET estiver definido no ambiente: valida a assinatura
-//     criptográfica com jsonwebtoken (jwt.verify). Esta é a operação segura.
-//   - Se JWT_SECRET não estiver definido: modo de compatibilidade — apenas
-//     decodifica o payload base64 sem verificar assinatura. Um aviso é logado
-//     a cada inicialização. Use apenas em desenvolvimento/integração.
-//
-//   O customerId nunca é aceito do body — vem sempre do campo `sub` do token.
-// ============================================================================
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload as JwtLibPayload, JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { sendProblem } from "./errors.js";
 import { JwtPayload } from "./types.js";
 
-/** Estende Request para carregar o payload do JWT. */
 declare global {
   namespace Express {
     interface Request {
@@ -28,16 +15,12 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
   console.warn(
-    "[auth] AVISO: JWT_SECRET não definido. Validação de assinatura desativada. " +
-    "Tokens não são verificados criptograficamente. NÃO use em produção."
+    "[auth] AVISO: JWT_SECRET não definido. Validação de assinatura desativada. NÃO use em produção."
   );
 }
 
-/**
- * Valida o JWT do header Authorization.
- * Com JWT_SECRET definido: verifica assinatura, expiração e estrutura.
- * Sem JWT_SECRET: decodifica apenas (modo compatibilidade, sem segurança criptográfica).
- */
+// Com JWT_SECRET: verifica assinatura e expiração via jwt.verify.
+// Sem JWT_SECRET: decodifica apenas o payload base64 (modo compatibilidade).
 export function requireAuth(
   req: Request,
   res: Response,
@@ -58,7 +41,6 @@ export function requireAuth(
 
   const token = authHeader.slice(7);
 
-  // ── Modo seguro: verificação criptográfica ──────────────────────────────
   if (JWT_SECRET) {
     let payload: JwtLibPayload;
     try {
@@ -79,14 +61,12 @@ export function requireAuth(
       return;
     }
 
-    req.jwtPayload = {
-      sub: payload.sub,
-    };
+    req.jwtPayload = { sub: payload.sub };
     next();
     return;
   }
 
-  // ── Modo compatibilidade: decodificação base64 sem verificação ──────────
+  // Modo compatibilidade: sem JWT_SECRET
   const parts = token.split(".");
   if (parts.length !== 3) {
     sendProblem(res, 401, "Unauthorized", "Token JWT mal-formado.", req);

@@ -1,23 +1,13 @@
-// ============================================================================
-// CrediBot Admin BFF — Tipos compartilhados
-// ============================================================================
-
-/**
- * Payload decodificado do JWT (propagado pelo header Authorization).
- * No Admin BFF, o campo `role` é extraído para verificar privilégios.
- */
 export interface JwtPayload {
-  sub: string;       // officerId / employeeId (ex: "EMP-007")
+  sub: string;
   name?: string;
   email?: string;
-  role?: string;     // ex: "admin", "analyst" — verificado pelo middleware
+  role?: string;
   iat?: number;
   exp?: number;
 }
 
-// ---------------------------------------------------------------------------
-// Respostas dos microsserviços (contratos internos)
-// ---------------------------------------------------------------------------
+// Respostas dos microsserviços
 
 /** Loan Service — GET /api/v1/loans/{id} */
 export interface LoanDetailResponse {
@@ -52,14 +42,11 @@ export interface CreditAnalysisResponse {
   evaluatedAt: string;
 }
 
-// ---------------------------------------------------------------------------
-// Payloads do Admin BFF (respostas entregues ao painel administrativo)
-// ---------------------------------------------------------------------------
+// Payloads entregues ao painel administrativo
 
 /**
  * GET /loans/:id — Payload de auditoria completo.
- * Contém todos os dados sensíveis que o Web BFF suprime:
- * CPF, renda mensal, score de risco, versão do modelo, fatores de decisão.
+ * Inclui CPF, renda mensal, score de risco, versão do modelo e fatores de decisão.
  */
 export interface LoanAuditPayload {
   loanId: string;
@@ -74,9 +61,9 @@ export interface LoanAuditPayload {
 export interface CustomerAuditSection {
   id: string;
   name: string;
-  cpf: string | null;           // exposto ao analista — protegido do cliente web
+  cpf: string | null;
   email: string;
-  monthlyIncome: number | null; // exposto ao analista — protegido do cliente web
+  monthlyIncome: number | null;
   kycStatus: string;
   accountBlocked: boolean;
 }
@@ -96,16 +83,14 @@ export interface FinancialsSection {
   appliedInterestRate: string;
 }
 
-/** PATCH /loans/:id/review — Resposta da revisão manual */
+/** PATCH /loans/:id/review */
 export interface LoanReviewPayload {
   loanId: string;
   status: string;
   reviewedBy: string;
 }
 
-// ---------------------------------------------------------------------------
-// Erro RFC 7807 — Problem Details
-// ---------------------------------------------------------------------------
+// RFC 7807 Problem Details
 export interface ProblemDetail {
   type: string;
   title: string;

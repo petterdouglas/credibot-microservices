@@ -1,8 +1,3 @@
-// ============================================================================
-// CrediBot Web BFF — Rota: GET /dashboard
-// Agrega perfil do cliente + saldo da carteira + empréstimo ativo.
-// Payload leve: sem CPF, sem score, sem dados internos administrativos.
-// ============================================================================
 import { Router, Request, Response } from "express";
 import { requireAuth } from "../auth.js";
 import { callService } from "../httpClient.js";
@@ -17,11 +12,9 @@ import {
 
 const router = Router();
 
-// Taxa de juros exibida ao cliente (definida pela plataforma).
-// Quando o Loan Service passar a retornar esse dado, substituir por campo real.
+// Taxa de juros exibida ao cliente. Substituir quando loan-service retornar esse dado.
 const DISPLAY_RATE = "2.5%";
 
-/** GET /dashboard */
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   const customerId = req.jwtPayload!.sub;
 
@@ -29,7 +22,6 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
   const loanUrl = process.env.LOAN_SERVICE_URL!;
 
   try {
-    // Consultas paralelas: perfil + carteira são independentes entre si.
     const [profile, wallet] = await Promise.all([
       callService<CustomerProfileResponse>(
         `${customerUrl}/api/v1/customers/${customerId}`
@@ -39,19 +31,13 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
       ),
     ]);
 
-    // Busca empréstimos ativos do cliente (CQRS Read Model — paginação mínima).
-    // Filtra por status PENDING e APPROVED para exibir o mais recente.
     const loans = await callService<LoanListResponse>(
       `${loanUrl}/api/v1/loans?customerId=${encodeURIComponent(customerId)}&page=0&size=5`
     );
 
-    // Seleciona o empréstimo mais relevante (PENDING > APPROVED > último).
     const activeLoan = selectActiveLoan(loans);
 
-    // ---------------------------------------------------------------------------
-    // MASCARAMENTO: CPF, monthlyIncome, kycStatus, accountBlocked e campos
-    // administrativos NÃO são incluídos no payload do Web BFF.
-    // ---------------------------------------------------------------------------
+    // CPF, monthlyIncome, kycStatus e campos administrativos não são incluídos no payload.
     const payload: DashboardPayload = {
       customerName: profile.name,
       walletBalance: wallet.balance,
@@ -64,11 +50,7 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Retorna um resumo do empréstimo mais relevante para o dashboard.
- * Preferência: PENDING → APPROVED. Nenhum empréstimo → null.
- * Campos omitidos: customerId, createdAt, _links (internos).
- */
+// Preferência: PENDING > APPROVED. Retorna null se não houver empréstimos.
 function selectActiveLoan(loans: LoanListResponse): ActiveLoanSummary | null {
   if (!loans.content || loans.content.length === 0) return null;
 
@@ -91,7 +73,6 @@ function selectActiveLoan(loans: LoanListResponse): ActiveLoanSummary | null {
   };
 }
 
-/** Traduz status interno para português amigável ao cliente final. */
 function translateStatus(status: string): string {
   const map: Record<string, string> = {
     PENDING: "PROCESSANDO",

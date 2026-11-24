@@ -1,12 +1,3 @@
-// ============================================================================
-// CrediBot Web BFF — Rota: POST /chat
-// Encaminha mensagem do cliente ao AI Assistant Service.
-//
-// SEGURANÇA:
-//   - customerId vem do JWT — cliente não pode injetar outro ID.
-//   - contextSources e toolsInvoked (metadados internos do RAG/LangChain)
-//     NÃO são repassados ao frontend: são dados de auditoria interna.
-// ============================================================================
 import { Router, Request, Response } from "express";
 import { requireAuth } from "../auth.js";
 import { callService } from "../httpClient.js";
@@ -15,8 +6,8 @@ import { AiChatUpstreamResponse, ChatPayload } from "../types.js";
 
 const router = Router();
 
-/** POST /chat */
 router.post("/", requireAuth, async (req: Request, res: Response) => {
+  // customerId vem do JWT — cliente não pode injetar outro ID.
   const customerId = req.jwtPayload!.sub;
 
   const { message } = req.body as { message?: unknown };
@@ -50,17 +41,12 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       `${aiUrl}/api/v1/chat`,
       {
         method: "POST",
-        // customerId injetado pelo BFF via JWT — nunca do body do cliente.
         body: { customerId, message: message.trim() },
         timeoutMs: 30_000, // LLM pode ser lento
       }
     );
 
-    // ---------------------------------------------------------------------------
-    // MASCARAMENTO: contextSources e toolsInvoked são metadados internos do
-    // pipeline RAG/LangChain. São dados de observabilidade/auditoria e não
-    // devem ser expostos ao cliente final.
-    // ---------------------------------------------------------------------------
+    // contextSources e toolsInvoked são metadados internos do pipeline RAG — não expostos ao cliente.
     const payload: ChatPayload = {
       reply: upstream.reply,
     };

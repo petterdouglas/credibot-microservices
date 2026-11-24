@@ -1,20 +1,3 @@
-// ============================================================================
-// CrediBot Admin BFF — Rota: GET /loans/:id  e  PATCH /loans/:id/review
-//
-// GET /loans/:id — Visão completa de auditoria do empréstimo.
-//   Agrega dados de três microsserviços em um único payload administrativo:
-//   loan-service, customer-service e credit-analysis-service.
-//   DIFERENÇA EXPLÍCITA vs Web BFF (Seção 4.4 do contrato):
-//     - Inclui CPF e renda mensal do cliente.
-//     - Inclui riskScore, modelVersion, fatores e razão de aprovação.
-//     - Inclui status de bloqueio de conta (KYC).
-//     - Inclui TODOS os metadados do empréstimo (installments, timestamps).
-//     - Inclui status do depósito (resultado da SAGA).
-//     - Inclui fatores individuais do motor de risco.
-//
-// PATCH /loans/:id/review — Decisão manual da mesa de crédito.
-//   Propaga a decisão do analista para o loan-service.
-// ============================================================================
 import { Router, Request, Response } from "express";
 import { requireAdminAuth } from "../auth.js";
 import { callService } from "../httpClient.js";
@@ -35,9 +18,8 @@ const router = Router();
 // Taxa aplicada pela plataforma (campo ainda não retornado pelo loan-service).
 const APPLIED_INTEREST_RATE = "2.5%";
 
-// ---------------------------------------------------------------------------
-// GET /loans/:id — Auditoria completa do empréstimo para analistas
-// ---------------------------------------------------------------------------
+// GET /loans/:id — Visão de auditoria completa do empréstimo para analistas.
+// Agrega loan-service, customer-service e credit-analysis-service.
 router.get("/:id", requireAdminAuth, async (req: Request, res: Response) => {
   const loanId = req.params.id;
 
@@ -45,7 +27,6 @@ router.get("/:id", requireAdminAuth, async (req: Request, res: Response) => {
   const customerUrl = process.env.CUSTOMER_SERVICE_URL!;
   const creditUrl = process.env.CREDIT_ANALYSIS_URL!;
 
-  // 1. Busca dados primários do empréstimo
   let loan: LoanDetailResponse;
   try {
     loan = await callService<LoanDetailResponse>(
@@ -56,9 +37,8 @@ router.get("/:id", requireAdminAuth, async (req: Request, res: Response) => {
     return;
   }
 
-  // 2. Busca dados do cliente e análise de crédito em paralelo.
-  //    A análise de crédito pode não existir (ex: empréstimo ainda PENDING).
-  //    Nesse caso, retornamos null no campo creditAnalysis — sem falhar.
+  // Busca customer e análise de crédito em paralelo.
+  // A análise pode não existir (empréstimo ainda PENDING) — retorna null, não falha.
   const [customerResult, creditResult] = await Promise.allSettled([
     callService<CustomerProfileResponse>(
       `${customerUrl}/api/v1/customers/${loan.customerId}`
@@ -68,14 +48,12 @@ router.get("/:id", requireAdminAuth, async (req: Request, res: Response) => {
     ),
   ]);
 
-  // Extrai customer — se falhar, propaga o erro (dado obrigatório para auditoria).
   if (customerResult.status === "rejected") {
     handleUpstreamError(res, req, customerResult.reason, "customer-service");
     return;
   }
   const customer = customerResult.value;
 
-  // Extrai análise de crédito — se indisponível, envia null (dado opcional).
   let creditAnalysis: CreditAnalysisSection | null = null;
   if (creditResult.status === "fulfilled") {
     const ca = creditResult.value;
@@ -83,8 +61,6 @@ router.get("/:id", requireAdminAuth, async (req: Request, res: Response) => {
       riskScore: ca.score,
       modelVersion: ca.modelVersion,
       decision: ca.decision,
-      // Monta a razão de aprovação a partir dos fatores disponíveis.
-      // O campo "approvalReason" do contrato é derivado dos fatores do motor.
       approvalReason:
         ca.factors.length > 0
           ? ca.factors.map((f) => f.factor).join("; ")
@@ -93,7 +69,6 @@ router.get("/:id", requireAdminAuth, async (req: Request, res: Response) => {
       evaluatedAt: ca.evaluatedAt,
     };
   } else {
-    // Log do motivo, mas não bloqueia a resposta — análise pode estar pendente.
     const reason = creditResult.reason;
     if (!(reason instanceof UpstreamError) || reason.status !== 404) {
       console.warn(
@@ -103,13 +78,6 @@ router.get("/:id", requireAdminAuth, async (req: Request, res: Response) => {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // PAYLOAD ADMINISTRATIVO COMPLETO
-  // Inclui todos os campos sensíveis que o Web BFF suprime:
-  //   customer.cpf, customer.monthlyIncome, customer.accountBlocked,
-  //   creditAnalysis.riskScore, creditAnalysis.modelVersion,
-  //   creditAnalysis.factors, financials.installments.
-  // -------------------------------------------------------------------------
   const customerSection: CustomerAuditSection = {
     id: customer.id,
     name: customer.name,
@@ -139,22 +107,20 @@ router.get("/:id", requireAdminAuth, async (req: Request, res: Response) => {
   res.status(200).json(payload);
 });
 
-// ---------------------------------------------------------------------------
-// PATCH /loans/:id/review — Revisão manual da mesa de crédito
-// ---------------------------------------------------------------------------
+// PATCH /loans/:id/review — Decisão manual da mesa de crédito.
 router.patch(
   "/:id/review",
   requireAdminAuth,
   async (req: Request, res: Response) => {
     const loanId = req.params.id;
-    const officerId = req.jwtPayload!.sub; // ID do analista vem do token
+    // officerId vem do token — o analista não pode se impersonar via body.
+    const officerId = req.jwtPayload!.sub;
 
     const { decision, justification } = req.body as {
       decision?: unknown;
       justification?: unknown;
     };
 
-    // Validação dos campos obrigatórios
     if (typeof decision !== "string" || decision.trim().length === 0) {
       sendProblem(
         res,
@@ -180,8 +146,6 @@ router.patch(
     const loanUrl = process.env.LOAN_SERVICE_URL!;
 
     try {
-      // officerId injetado pelo BFF via JWT — o analista não pode se
-      // impersonar passando outro ID no body.
       const upstream = await callService<{ id: string; status: string }>(
         `${loanUrl}/api/v1/loans/${loanId}/review`,
         {

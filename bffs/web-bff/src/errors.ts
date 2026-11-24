@@ -1,10 +1,6 @@
-// ============================================================================
-// CrediBot Web BFF — Helpers de erro RFC 7807
-// ============================================================================
 import { Request, Response } from "express";
 import { ProblemDetail } from "./types.js";
 
-/** Monta e envia uma resposta Problem Details (RFC 7807). */
 export function sendProblem(
   res: Response,
   status: number,
@@ -23,7 +19,6 @@ export function sendProblem(
   res.status(status).json(body);
 }
 
-/** Trata erros de comunicação com microsserviços de forma uniforme. */
 export function handleUpstreamError(
   res: Response,
   req: Request,
@@ -33,7 +28,6 @@ export function handleUpstreamError(
   console.error(`[web-bff] upstream error from ${serviceName}:`, err);
 
   if (err instanceof UpstreamError) {
-    // Repassa status do upstream, mas sem vazar detalhes internos
     const userDetail =
       err.status >= 500
         ? `${serviceName} está temporariamente indisponível.`
@@ -51,7 +45,6 @@ export function handleUpstreamError(
   );
 }
 
-/** Erro customizado para respostas não-2xx de upstream. */
 export class UpstreamError extends Error {
   constructor(
     public readonly status: number,
@@ -62,9 +55,6 @@ export class UpstreamError extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers internos
-// ---------------------------------------------------------------------------
 function slugify(title: string): string {
   return title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 }

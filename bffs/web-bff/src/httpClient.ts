@@ -1,7 +1,3 @@
-// ============================================================================
-// CrediBot Web BFF — Cliente HTTP para microsserviços
-// Usa apenas Node.js built-in fetch (disponível desde Node 18).
-// ============================================================================
 import { UpstreamError } from "./errors.js";
 
 export interface FetchOptions {
@@ -11,11 +7,6 @@ export interface FetchOptions {
   timeoutMs?: number;
 }
 
-/**
- * Realiza uma chamada HTTP para um microsserviço interno.
- * - Lança UpstreamError para respostas não-2xx.
- * - Lança Error padrão para falhas de rede/timeout.
- */
 export async function callService<T>(
   url: string,
   options: FetchOptions = {}
@@ -39,7 +30,6 @@ export async function callService<T>(
       signal: controller.signal,
     });
 
-    // Tenta parsear o corpo mesmo em erro, para extrair detail do Problem Details
     let responseBody: unknown;
     const contentType = response.headers.get("content-type") ?? "";
     if (contentType.includes("application/json")) {
@@ -64,7 +54,7 @@ export async function callService<T>(
     if (err instanceof Error && err.name === "AbortError") {
       throw new UpstreamError(504, "Upstream timeout");
     }
-    throw err; // Erro de rede: será tratado como 503
+    throw err;
   } finally {
     clearTimeout(timer);
   }

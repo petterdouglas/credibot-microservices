@@ -1,7 +1,3 @@
-// ============================================================================
-// CrediBot Admin BFF — Helpers de erro RFC 7807
-// (mesma estratégia do Web BFF — padronização do projeto)
-// ============================================================================
 import { Request, Response } from "express";
 import { ProblemDetail } from "./types.js";
 

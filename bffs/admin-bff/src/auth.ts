@@ -1,22 +1,8 @@
-// ============================================================================
-// CrediBot Admin BFF — Middleware de autenticação e autorização
-//
-// Validação do JWT:
-//   - Se JWT_SECRET estiver definido no ambiente: valida a assinatura
-//     criptográfica com jsonwebtoken (jwt.verify). Esta é a operação segura.
-//   - Se JWT_SECRET não estiver definido: modo de compatibilidade — apenas
-//     decodifica o payload base64 sem verificar assinatura. Um aviso é logado
-//     a cada inicialização. Use apenas em desenvolvimento/integração.
-//
-//   Além da autenticação, verifica que o campo `role` do token
-//   contenha "admin" ou "analyst" — acesso negado caso contrário (403).
-// ============================================================================
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload as JwtLibPayload, JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { sendProblem } from "./errors.js";
 import { JwtPayload } from "./types.js";
 
-/** Papéis administrativos aceitos no Admin BFF. */
 const ALLOWED_ROLES = new Set(["admin", "analyst"]);
 
 declare global {
@@ -31,16 +17,13 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
   console.warn(
-    "[auth] AVISO: JWT_SECRET não definido. Validação de assinatura desativada. " +
-    "Tokens não são verificados criptograficamente. NÃO use em produção."
+    "[auth] AVISO: JWT_SECRET não definido. Validação de assinatura desativada. NÃO use em produção."
   );
 }
 
-/**
- * Exige token JWT com role administrativa (admin ou analyst).
- * Com JWT_SECRET definido: verifica assinatura, expiração e estrutura.
- * Sem JWT_SECRET: decodifica apenas (modo compatibilidade).
- */
+// Com JWT_SECRET: verifica assinatura e expiração via jwt.verify.
+// Sem JWT_SECRET: decodifica apenas o payload base64 (modo compatibilidade).
+// Em ambos os casos exige role "admin" ou "analyst".
 export function requireAdminAuth(
   req: Request,
   res: Response,
@@ -61,7 +44,6 @@ export function requireAdminAuth(
 
   const token = authHeader.slice(7);
 
-  // ── Modo seguro: verificação criptográfica ──────────────────────────────
   if (JWT_SECRET) {
     let payload: JwtLibPayload;
     try {
@@ -99,7 +81,7 @@ export function requireAdminAuth(
     return;
   }
 
-  // ── Modo compatibilidade: decodificação base64 sem verificação ──────────
+  // Modo compatibilidade: sem JWT_SECRET
   const parts = token.split(".");
   if (parts.length !== 3) {
     sendProblem(res, 401, "Unauthorized", "Token JWT mal-formado.", req);

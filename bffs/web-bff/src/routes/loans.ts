@@ -1,13 +1,3 @@
-// ============================================================================
-// CrediBot Web BFF — Rota: POST /loans
-// Permite ao cliente solicitar um empréstimo.
-//
-// SEGURANÇA:
-//   - customerId vem SEMPRE do JWT (req.jwtPayload.sub).
-//   - O body do cliente NUNCA fornece o customerId.
-//   - Campos internos da resposta do Loan Service (_links, customerId) são
-//     omitidos do payload retornado ao frontend.
-// ============================================================================
 import { Router, Request, Response } from "express";
 import { requireAuth } from "../auth.js";
 import { callService } from "../httpClient.js";
@@ -16,11 +6,10 @@ import { LoanCreatedResponse, LoanRequestedPayload } from "../types.js";
 
 const router = Router();
 
-/** POST /loans */
 router.post("/", requireAuth, async (req: Request, res: Response) => {
+  // customerId vem do JWT — nunca do body do cliente.
   const customerId = req.jwtPayload!.sub;
 
-  // Validação dos parâmetros do cliente
   const { amount, installments } = req.body as {
     amount?: unknown;
     installments?: unknown;
@@ -55,7 +44,6 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
   const loanUrl = process.env.LOAN_SERVICE_URL!;
 
   try {
-    // customerId injetado pelo BFF — nunca confiando no body do cliente.
     const upstream = await callService<LoanCreatedResponse>(
       `${loanUrl}/api/v1/loans`,
       {
@@ -64,11 +52,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       }
     );
 
-    // ---------------------------------------------------------------------------
-    // MASCARAMENTO: customerId, installments, createdAt e _links (HATEOAS
-    // internos) são omitidos do payload do cliente web.
-    // O cliente recebe apenas o ID do empréstimo, o status e uma mensagem.
-    // ---------------------------------------------------------------------------
+    // customerId, installments, createdAt e _links não são repassados ao cliente.
     const payload: LoanRequestedPayload = {
       loanId: upstream.id,
       status: "PROCESSANDO",
