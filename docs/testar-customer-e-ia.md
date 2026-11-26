@@ -49,3 +49,23 @@ docker compose exec -T web-bff node --input-type=module < scripts/test-customer-
 Se o Docker estiver instalado no WSL, execute os comandos em um terminal Ubuntu, na pasta do repositório. O teste cria clientes fictícios e solicita microcrédito. Use uma base de desenvolvimento. O teste verifica cadastro, perfil, carteira, aprovação com depósito, compensação para cliente inexistente, repetição de depósito, validação do chat, consulta ao Loan Service, proteção entre titulares e a rota autenticada do Web BFF.
 
 As operações internas são `POST /api/v1/customers`, `GET /api/v1/customers/{id}`, `GET /api/v1/customers/{id}/wallet` e `POST /api/v1/customers/{id}/deposit`. O cadastro inicia o KYC em `PENDING`. A verificação de identidade depende de um processo externo. Contas bloqueadas recebem recusa de depósito. O assistente está na porta interna `3003` do Compose, e o Gateway expõe `POST /web/chat` para clientes autenticados.
+
+## Avaliação, PDF e demonstração
+
+O [relatório de avaliação](avaliacao-assistente.md) e o [PDF](avaliacao-assistente.pdf) registram os seis casos, a latência local e o custo estimado. Para reproduzir, rode na raiz após compilar o assistente:
+
+```sh
+node scripts/evaluate-assistant.mjs offline
+node scripts/evaluate-assistant.mjs error
+node --env-file=.env scripts/evaluate-assistant.mjs live
+```
+
+O teste ao vivo usa a chave do `.env` local e exige **Node.js 20.6 ou superior**. Configure a chave no provedor escolhido antes de gravar e confirme `responseMode: llm`. O comparativo ao vivo usa o mesmo modelo nos dois braços.
+
+Com o Compose de desenvolvimento ativo, use `bash scripts/demo-saga-falha.sh` para mostrar o bloqueio, o cancelamento compensatório e o saldo preservado. O comando cria um cliente fictício novo a cada execução.
+
+## Educação financeira no chat
+
+O assistente pode explicar orçamento, parcelas, juros, reserva e renegociação. Para comentar o cenário de outra pessoa, use dados hipotéticos ou anonimizados, por exemplo **Uma pessoa recebe R$ 3.000 por mês e paga R$ 1.900 de despesas essenciais. O que ela pode comparar antes de renegociar uma dívida?**
+
+O contexto do CrediBot continua vindo da base de conhecimento. A tool de status consulta apenas empréstimos do titular autenticado. A chave fica no `.env` local do backend. Para aplicá-la no Compose, execute `docker compose up -d --no-deps --build ai-assistant-service`.

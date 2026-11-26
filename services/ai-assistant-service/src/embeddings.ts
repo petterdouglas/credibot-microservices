@@ -1,6 +1,6 @@
 import { jsonRequest } from "./upstream";
 
-export const provider = process.env.LLM_PROVIDER ?? "gemini";
+export const provider = process.env.LLM_PROVIDER?.trim().toLowerCase() || "gemini";
 const configuredKey = process.env.LLM_API_KEY?.trim();
 export const apiKey = configuredKey && !configuredKey.startsWith("changeme") ? configuredKey : undefined;
 
