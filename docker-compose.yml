@@ -57,6 +57,8 @@ services:
       CUSTOMER_SERVICE_URL: http://customer-service:8082
       CREDIT_ANALYSIS_URL: http://credit-analysis-service:8083
       JWT_SECRET: ${JWT_SECRET:-}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
     depends_on:
       loan-service:
         condition: service_healthy
