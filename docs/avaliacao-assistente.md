@@ -35,3 +35,5 @@ A hipótese usa uma geração por operação, documentos já indexados e exclui 
 1. Configure `LLM_API_KEY` no `.env` local ignorado pelo Git. Execute `node --env-file=.env scripts/evaluate-assistant.mjs live` após compilar o assistente. Os casos de domínio exigem `responseMode: llm` nos dois braços.
 2. Execute `node scripts/evaluate-assistant.mjs offline` e `node scripts/evaluate-assistant.mjs error`. A chave deliberadamente inválida retornou HTTP 400 do Gemini durante o ensaio e a chain respondeu com `responseMode: local` e a fonte da base.
 3. Em um Compose de desenvolvimento, rode `bash scripts/demo-saga-falha.sh`. O script cadastra um cliente fictício, bloqueia apenas essa conta, solicita crédito e verifica `CANCELED_DUE_TO_ERROR` e saldo final igual ao inicial. O Customer Service publica `deposit.failed` e o Loan Service executa a compensação.
+
+No ensaio com os serviços locais em Docker, a conta fictícia iniciou bloqueada com saldo zero. A solicitação foi de PENDING a CANCELED_DUE_TO_ERROR e a carteira permaneceu com saldo zero.
