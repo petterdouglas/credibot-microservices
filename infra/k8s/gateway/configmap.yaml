@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-nginx-config
+  namespace: credibot
+  labels:
+    app: gateway
+    component: api-gateway
+data:
+  nginx.conf: |
+    # =============================================================================
+    # CrediBot — API Gateway (Nginx 1.27 Alpine)
+    # Responsabilidade: ponto único de entrada, roteamento, rate limiting.
+    #
+    # NOTA SOBRE AUTENTICAÇÃO DE BORDA:
+    #   Não existe auth-service nem JWT secret compartilhado no repositório atual.
+    #   O Nginx propaga o header Authorization para os BFFs, que são responsáveis
+    #   pela validação do token em suas camadas de middleware.
+    #   JWT Offloading no Nginx só poderá ser ativado quando um serviço de
+    #   autenticação e um secret/JWKS endpoint estiverem disponíveis na arquitetura.
+    # =============================================================================
+
+    limit_req_zone $binary_remote_addr zone=web_rate_limit:10m   rate=20r/s;
+    limit_req_zone $binary_remote_addr zone=admin_rate_limit:10m rate=10r/s;
+    limit_req_status 429;
+
+    upstream web_bff {
+        server web-bff:3001;
+        keepalive 32;
+    }
+
+    upstream admin_bff {
+        server admin-bff:3002;
+        keepalive 32;
+    }
+
+    server {
+        listen 80;
+        server_name _;
+
+        client_max_body_size 5m;
+
+        proxy_connect_timeout 10s;
+        proxy_send_timeout    30s;
+        proxy_read_timeout    30s;
+
+        proxy_http_version 1.1;
+        proxy_set_header   Connection        "";
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   Authorization     $http_authorization;
+
+        location = /health {
+            access_log  off;
+            default_type application/json;
+            return 200 '{"status":"UP","service":"api-gateway"}';
+        }
+
+        location /web/ {
+            limit_req zone=web_rate_limit burst=30 nodelay;
+            proxy_pass http://web_bff/;
+        }
+
+        location /admin/ {
+            limit_req zone=admin_rate_limit burst=10 nodelay;
+            proxy_pass http://admin_bff/;
+        }
+
+        error_page 429 @too_many_requests;
+        location @too_many_requests {
+            default_type application/json;
+            return 429 '{"status":"ERROR","code":429,"message":"Too Many Requests — rate limit exceeded. Try again later."}';
+        }
+
+        error_page 502 503 504 @upstream_error;
+        location @upstream_error {
+            default_type application/json;
+            return 503 '{"status":"ERROR","code":503,"message":"Service temporarily unavailable. Please try again shortly."}';
+        }
+    }

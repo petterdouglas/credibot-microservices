@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: credibot
+  labels:
+    app: gateway
+    component: api-gateway
+spec:
+  # NodePort para demo local (Minikube/Kind).
+  # Trocar para LoadBalancer em ambientes cloud (EKS, GKE, AKS).
+  type: NodePort
+  selector:
+    app: gateway
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080        # porta externa acessada pelos clientes
+      targetPort: 80    # porta interna do container nginx
+      nodePort: 30080   # porta no nó (acesso via <node-ip>:30080)

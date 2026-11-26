@@ -1,0 +1,120 @@
+import { Request, Response, NextFunction } from "express";
+import jwt, { JwtPayload as JwtLibPayload, JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
+import { sendProblem } from "./errors.js";
+import { JwtPayload } from "./types.js";
+
+const ALLOWED_ROLES = new Set(["admin", "analyst"]);
+
+declare global {
+  namespace Express {
+    interface Request {
+      jwtPayload?: JwtPayload;
+    }
+  }
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.warn(
+    "[auth] AVISO: JWT_SECRET não definido. Validação de assinatura desativada. NÃO use em produção."
+  );
+}
+
+// Com JWT_SECRET: verifica assinatura e expiração via jwt.verify.
+// Sem JWT_SECRET: decodifica apenas o payload base64 (modo compatibilidade).
+// Em ambos os casos exige role "admin" ou "analyst".
+export function requireAdminAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const authHeader = req.headers.authorization ?? "";
+
+  if (!authHeader.startsWith("Bearer ")) {
+    sendProblem(
+      res,
+      401,
+      "Unauthorized",
+      "Header Authorization ausente ou não é do tipo Bearer.",
+      req
+    );
+    return;
+  }
+
+  const token = authHeader.slice(7);
+
+  if (JWT_SECRET) {
+    let payload: JwtLibPayload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET) as JwtLibPayload;
+    } catch (err) {
+      if (err instanceof TokenExpiredError) {
+        sendProblem(res, 401, "Unauthorized", "Token expirado.", req);
+      } else if (err instanceof JsonWebTokenError) {
+        sendProblem(res, 401, "Unauthorized", "Token JWT inválido ou assinatura incorreta.", req);
+      } else {
+        sendProblem(res, 401, "Unauthorized", "Não foi possível validar o token JWT.", req);
+      }
+      return;
+    }
+
+    if (!payload.sub) {
+      sendProblem(res, 401, "Unauthorized", "Token não contém identificador de usuário (sub).", req);
+      return;
+    }
+
+    const role = ((payload["role"] as string) ?? "").toLowerCase();
+    if (!ALLOWED_ROLES.has(role)) {
+      sendProblem(
+        res,
+        403,
+        "Forbidden",
+        "Acesso negado. Este painel requer perfil administrativo (admin ou analyst).",
+        req
+      );
+      return;
+    }
+
+    req.jwtPayload = { sub: payload.sub, role };
+    next();
+    return;
+  }
+
+  // Modo compatibilidade: sem JWT_SECRET
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    sendProblem(res, 401, "Unauthorized", "Token JWT mal-formado.", req);
+    return;
+  }
+
+  try {
+    const payloadJson = Buffer.from(
+      parts[1].replace(/-/g, "+").replace(/_/g, "/"),
+      "base64"
+    ).toString("utf8");
+    const payload = JSON.parse(payloadJson) as JwtPayload;
+
+    if (!payload.sub) {
+      sendProblem(res, 401, "Unauthorized", "Token não contém identificador de usuário (sub).", req);
+      return;
+    }
+
+    const role = (payload.role ?? "").toLowerCase();
+    if (!ALLOWED_ROLES.has(role)) {
+      sendProblem(
+        res,
+        403,
+        "Forbidden",
+        "Acesso negado. Este painel requer perfil administrativo (admin ou analyst).",
+        req
+      );
+      return;
+    }
+
+    req.jwtPayload = payload;
+    next();
+  } catch {
+    sendProblem(res, 401, "Unauthorized", "Não foi possível decodificar o token JWT.", req);
+  }
+}

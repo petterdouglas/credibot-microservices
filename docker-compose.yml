@@ -27,6 +27,7 @@ services:
       LOAN_SERVICE_URL: http://loan-service:8081
       CUSTOMER_SERVICE_URL: http://customer-service:8082
       AI_ASSISTANT_URL: http://ai-assistant-service:3003
+      JWT_SECRET: ${JWT_SECRET:-}
     depends_on:
       loan-service:
         condition: service_healthy
@@ -34,6 +35,12 @@ services:
         condition: service_healthy
       ai-assistant-service:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     networks:
       - edge-net
       - services-net
@@ -49,6 +56,7 @@ services:
       LOAN_SERVICE_URL: http://loan-service:8081
       CUSTOMER_SERVICE_URL: http://customer-service:8082
       CREDIT_ANALYSIS_URL: http://credit-analysis-service:8083
+      JWT_SECRET: ${JWT_SECRET:-}
     depends_on:
       loan-service:
         condition: service_healthy
@@ -56,6 +64,12 @@ services:
         condition: service_healthy
       credit-analysis-service:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3002/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     networks:
       - edge-net
       - services-net
@@ -182,6 +196,12 @@ services:
     depends_on:
       chromadb:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3003/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     networks:
       - services-net
       - data-net
