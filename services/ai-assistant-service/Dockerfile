@@ -4,7 +4,7 @@ WORKDIR /build
 ENV NODE_OPTIONS="--dns-result-order=ipv4first"
 
 COPY package*.json ./
-RUN npm config set maxsockets 3 && npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+RUN npm config set maxsockets 3 && npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 
 COPY tsconfig.json ./
 COPY src ./src
@@ -14,11 +14,11 @@ RUN npm run build
 FROM node:20-alpine AS runtime
 WORKDIR /app
 
-ENV NODE_ENV=production
+ENV NODE_ENV=production SERVER_ADDRESS=0.0.0.0
 ENV NODE_OPTIONS="--dns-result-order=ipv4first"
 
 COPY package*.json ./
-RUN npm config set maxsockets 3 && npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --omit=dev && npm cache clean --force
+RUN npm config set maxsockets 3 && npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --omit=dev && npm cache clean --force
 
 COPY --from=builder /build/dist ./dist
 COPY knowledge-base ./knowledge-base

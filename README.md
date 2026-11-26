@@ -116,6 +116,12 @@ docker compose ps
 
 ---
 
+## Teste do Customer Service e do assistente
+
+O [roteiro de teste](docs/testar-customer-e-ia.md) mostra como conversar com o assistente, ativar um modelo e verificar a integração com a carteira e o fluxo de empréstimo.
+
+---
+
 ## Referências
 
 - BANCO CENTRAL DO BRASIL. **Relatório de Cidadania Financeira 2023**. Brasília: BCB, 2023. Disponível em: <https://www.bcb.gov.br/cidadaniafinanceira>.

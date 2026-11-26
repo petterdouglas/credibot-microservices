@@ -195,6 +195,7 @@ services:
       LOAN_SERVICE_URL: http://loan-service:8081
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_MODEL: ${LLM_MODEL:-}
     depends_on:
       chromadb:
         condition: service_healthy
