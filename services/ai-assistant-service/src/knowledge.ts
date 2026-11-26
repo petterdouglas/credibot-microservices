@@ -19,10 +19,17 @@ function normalize(vector: number[]) {
   const norm = Math.hypot(...vector) || 1;
   return vector.map((value) => value / norm);
 }
+const stopWords = new Set([
+  "assim", "como", "com", "das", "dos", "essa", "esse", "esta", "este", "mais", "meu", "minha",
+  "nos", "onde", "para", "por", "qual", "quais", "quando", "que", "sao", "seu", "sua", "uma",
+]);
+
 function localEmbedding(text: string): number[] {
   const terms = text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").match(/[a-z0-9]{3,}/g) ?? [];
   const vector: number[] = Array(512).fill(0);
-  for (const term of new Set(terms)) {
+  const keywords = new Set(terms.filter((term) => !stopWords.has(term))
+    .map((term) => term.length > 3 ? term.replace(/s$/, "") : term));
+  for (const term of keywords) {
     const hash = createHash("sha256").update(term).digest();
     vector[hash.readUInt16BE(0) % vector.length] += hash[2] % 2 === 0 ? 1 : -1;
   }
@@ -49,7 +56,7 @@ export class Knowledge {
   constructor(private readonly documents: Document[], private readonly chromaUrl?: string,
               private readonly embedder?: Embedder) {
     this.version = createHash("sha256").update(JSON.stringify(documents)).digest("hex").slice(0, 16);
-    this.localIndex = this.createIndex("local-v1", documents.map(({ text }) => localEmbedding(text)), 0.15);
+    this.localIndex = this.createIndex("local-v2", documents.map(({ text }) => localEmbedding(text)), 0.12);
   }
 
   private createIndex(model: string, vectors: number[][], minScore: number): VectorIndex {

@@ -66,7 +66,7 @@ console.log("OK SAGA compensada para cliente inexistente");
 
 const chat = assistant + "/api/v1/chat";
 await request(chat, 400, { customerId: created.id, message: "" });
-const faq = await request(chat, 200, { customerId: created.id, message: "O que é o CET e como funcionam os juros?" });
+const faq = await request(chat, 200, { customerId: created.id, message: "O que é o CET?" });
 assert.ok(faq.contextSources.includes("juros.md"));
 assert.ok(faq.reply.length > 0);
 
