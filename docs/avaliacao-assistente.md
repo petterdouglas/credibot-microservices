@@ -15,11 +15,24 @@ A execução registrada foi local, sem chave e sem ChromaDB. Com RAG, foram usad
 5. **Como o depósito na carteira se relaciona com a aprovação?** Com RAG, `carteira.md` indicou que o Loan Service confirma a aprovação após o resultado do depósito. Sem RAG, houve abstenção. A ordem do fluxo foi preservada.
 6. **Qual a previsão meteorológica para Marte?** Os dois braços se abstiveram e o RAG deixou a lista de fontes vazia. A pergunta fora do domínio funciona como controle negativo.
 
-O RAG local acertou fonte e conteúdo em **4 de 5 perguntas do domínio**. A pergunta fora do domínio foi tratada corretamente nos dois braços. O controle sem RAG e sem chave teve zero respostas substantivas no domínio. Esses resultados medem recuperação e fallback local. A qualidade da geração real com e sem RAG ainda requer uma chave válida.
+O RAG local acertou fonte e conteúdo em **4 de 5 perguntas do domínio**. A pergunta fora do domínio foi tratada corretamente nos dois braços. O controle sem RAG e sem chave teve zero respostas substantivas no domínio. Esses resultados medem recuperação e fallback local. O ensaio com o Gemini está registrado na seção seguinte.
 
 ## Latência medida
 
-Foram medidas 120 invocações por braço, com 20 repetições para cada pergunta após aquecimento, em um processo Node.js local. Com RAG, **p50 de 0,40 ms** e **p95 de 0,93 ms**. Sem RAG, **p50 de 0,27 ms** e **p95 de 0,37 ms**. A medição registra a chain no mesmo processo e exclui rede, Gateway, ChromaDB e chamadas ao provedor. O avaliador `live` registra a latência com o provedor por pergunta. Na ausência de uma chave válida, essa latência fica pendente.
+Foram medidas 120 invocações por braço, com 20 repetições para cada pergunta após aquecimento, em um processo Node.js local. Com RAG, **p50 de 0,40 ms** e **p95 de 0,93 ms**. Sem RAG, **p50 de 0,27 ms** e **p95 de 0,37 ms**. A medição registra a chain no mesmo processo e exclui rede, Gateway, ChromaDB e chamadas ao provedor. O avaliador `live` registra a latência com o provedor por pergunta. A latência do provedor foi medida em um segundo ensaio.
+
+## Ensaio com o Gemini real
+
+Com o Gemini 3.1 Flash-Lite, os cinco casos de domínio produziram texto nos dois braços. O RAG recuperou a fonte esperada em todos os cinco, inclusive na pergunta sobre parcelas que o índice local perdeu. A mediana das cinco chamadas bem-sucedidas foi **1,66 s com RAG** e **2,09 s sem RAG**. Os intervalos foram de 1,35 a 2,65 s e de 1,19 a 5,27 s, respectivamente. Cada caso teve uma observação aproveitada por braço. A diferença de mediana nesta amostra pequena não permite concluir que o RAG é mais rápido.
+
+- **CET:** os dois braços explicaram a composição. Com RAG, a resposta se apoiou no manual de juros.
+- **Taxa efetiva:** com RAG, o contexto apontou para oferta ou contrato. Sem RAG, o modelo confundiu taxa efetiva e CET.
+- **Parcelas:** ambos citaram campos que devem ser conferidos. O RAG com embeddings do provedor recuperou `parcelas.md`.
+- **Saldo:** os dois explicaram disponibilidade. Sem RAG, o Gemini incluiu detalhes de débitos e taxas que o manual não estabelece.
+- **Depósito e aprovação:** com RAG, o modelo explicou que o Loan Service confirma a aprovação após o resultado do depósito. Sem RAG, a resposta declarou falta de base para afirmar o fluxo do produto.
+- **Marte:** o primeiro ensaio com RAG recuperou fontes irrelevantes. A revisão passou a filtrar a intenção antes da recuperação. O teste local da revisão devolveu `no_context`, com a lista de fontes vazia.
+
+Houve indisponibilidade transitória do provedor durante as tentativas. O serviço manteve o fallback local e o avaliador passou a repetir uma vez os casos de domínio que entram em fallback. A latência acima considera a chamada bem-sucedida, sem incluir espera de nova tentativa. Um cenário fictício de renda, despesas e renegociação também gerou resposta via endpoint HTTP com `responseMode: llm`, em **2,77 s**, sem invocar a ferramenta de empréstimos.
 
 ## Estimativa de custo em escala
 
