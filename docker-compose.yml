@@ -224,10 +224,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
+      interval: 15s
+      timeout: 15s
+      retries: 20
+      start_period: 60s
     networks:
       - data-net
     restart: unless-stopped
@@ -246,10 +246,10 @@ services:
       - mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p${MYSQL_ROOT_PASSWORD}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+      interval: 15s
+      timeout: 15s
+      retries: 20
+      start_period: 90s
     networks:
       - data-net
     restart: unless-stopped
@@ -267,10 +267,10 @@ services:
       - mongodb_data:/data/db
     healthcheck:
       test: ["CMD-SHELL", "mongosh --eval \"db.adminCommand('ping')\" --quiet"]
-      interval: 10s
-      timeout: 15s
-      retries: 8
-      start_period: 30s
+      interval: 15s
+      timeout: 30s
+      retries: 20
+      start_period: 120s
     networks:
       - data-net
     restart: unless-stopped
@@ -284,10 +284,10 @@ services:
       - chromadb_data:/chroma/chroma
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/heartbeat')\""]
-      interval: 10s
-      timeout: 5s
-      retries: 8
-      start_period: 40s
+      interval: 15s
+      timeout: 15s
+      retries: 20
+      start_period: 90s
     networks:
       - data-net
     restart: unless-stopped
@@ -305,10 +305,10 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 15s
-      retries: 8
-      start_period: 40s
+      interval: 15s
+      timeout: 30s
+      retries: 20
+      start_period: 120s
     networks:
       - data-net
     restart: unless-stopped
