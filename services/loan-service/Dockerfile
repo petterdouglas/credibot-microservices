@@ -20,7 +20,7 @@ USER appuser
 
 EXPOSE 8081
 
-HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+HEALTHCHECK --interval=15s --timeout=5s --start-period=120s --retries=6 \
     CMD wget -qO- http://127.0.0.1:${SERVER_PORT:-8081}/actuator/health || exit 1
 
 ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
