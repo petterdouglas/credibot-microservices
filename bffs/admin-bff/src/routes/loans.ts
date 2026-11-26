@@ -146,7 +146,7 @@ router.patch(
     const loanUrl = process.env.LOAN_SERVICE_URL!;
 
     try {
-      const upstream = await callService<{ id: string; status: string }>(
+      const upstream = await callService<{ id?: string; loanId?: string; status: string }>(
         `${loanUrl}/api/v1/loans/${loanId}/review`,
         {
           method: "PATCH",
@@ -159,7 +159,7 @@ router.patch(
       );
 
       const payload: LoanReviewPayload = {
-        loanId: upstream.id,
+        loanId: upstream.loanId ?? upstream.id ?? loanId,
         status: upstream.status,
         reviewedBy: officerId,
       };
