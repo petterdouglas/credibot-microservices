@@ -57,6 +57,8 @@ services:
       CUSTOMER_SERVICE_URL: http://customer-service:8082
       CREDIT_ANALYSIS_URL: http://credit-analysis-service:8083
       JWT_SECRET: ${JWT_SECRET:-}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
     depends_on:
       loan-service:
         condition: service_healthy
@@ -80,11 +82,11 @@ services:
     build:
       context: ./frontends/web-app
       dockerfile: Dockerfile
+      args:
+        VITE_USE_MOCK: ${VITE_USE_MOCK:-false}
     container_name: credibot-web-app
     ports:
       - "${WEB_APP_PORT:-3000}:80"
-    environment:
-      WEB_API_URL: http://gateway:80/web/
     depends_on:
       gateway:
         condition: service_healthy
@@ -96,11 +98,11 @@ services:
     build:
       context: ./frontends/admin-panel
       dockerfile: Dockerfile
+      args:
+        VITE_USE_MOCK: ${VITE_USE_MOCK:-false}
     container_name: credibot-admin-panel
     ports:
       - "${ADMIN_PANEL_PORT:-3100}:80"
-    environment:
-      ADMIN_API_URL: http://gateway:80/admin/
     depends_on:
       gateway:
         condition: service_healthy
