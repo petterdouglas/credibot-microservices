@@ -112,7 +112,7 @@ router.patch(
   "/:id/review",
   requireAdminAuth,
   async (req: Request, res: Response) => {
-    const loanId = req.params.id;
+    const loanId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     // officerId vem do token — o analista não pode se impersonar via body.
     const officerId = req.jwtPayload!.sub;
 
