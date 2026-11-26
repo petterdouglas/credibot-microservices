@@ -1,0 +1,150 @@
+/* ============ Reset & Base ============ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #f0f2f5;
+  color: #1a1a2e;
+  min-height: 100vh;
+}
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; }
+
+/* ============ Pages ============ */
+.page { display: none; }
+.page.active { display: flex; flex-direction: column; min-height: 100vh; }
+.hidden { display: none !important; }
+.muted { color: #888; font-style: italic; }
+
+/* ============ Login ============ */
+#login-section {
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+}
+#login-section h1 { font-size: 2.2rem; color: #fff; }
+#login-section .subtitle { color: rgba(255,255,255,.8); margin-bottom: 1.5rem; }
+
+/* ============ Card ============ */
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+}
+.card-narrow { width: 100%; max-width: 480px; }
+.section-card { margin-top: 1.2rem; }
+
+/* ============ Form ============ */
+label {
+  display: block;
+  font-weight: 600;
+  margin: .8rem 0 .3rem;
+  font-size: .9rem;
+}
+input[type="text"],
+input[type="password"],
+select,
+textarea {
+  width: 100%;
+  padding: .65rem .8rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color .2s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: #3498db; }
+
+button[type="submit"], .btn-primary {
+  margin-top: 1.2rem;
+  width: 100%;
+  padding: .7rem;
+  background: #2c3e50;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background .2s;
+}
+button[type="submit"]:hover { background: #1a252f; }
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: .95rem;
+}
+.btn-link:hover { text-decoration: underline; }
+
+.error { color: #e74c3c; margin-top: .6rem; font-size: .9rem; }
+
+/* ============ Top bar ============ */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: .8rem 2rem;
+  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+  color: #fff;
+}
+.topbar .brand { font-weight: 700; font-size: 1.3rem; margin-right: auto; }
+.nav-links a {
+  padding: .4rem .8rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: .95rem;
+  transition: background .2s;
+}
+.nav-links a.active, .nav-links a:hover { background: rgba(255,255,255,.2); }
+.officer-label { font-size: .85rem; opacity: .8; }
+
+/* ============ Content ============ */
+.content { display: none; padding: 2rem; max-width: 900px; margin: 0 auto; width: 100%; }
+.content.active { display: block; }
+
+/* ============ Search row ============ */
+.search-row {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+.search-row input { flex: 1; }
+.search-row button {
+  width: auto;
+  padding: .65rem 1.5rem;
+  margin-top: 0;
+}
+
+/* ============ Detail table ============ */
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: .5rem;
+}
+.detail-table td, .detail-table th {
+  padding: .5rem .8rem;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  font-size: .95rem;
+}
+.detail-table td:first-child, .detail-table th:first-child {
+  font-weight: 600;
+  color: #555;
+  width: 40%;
+}
+.detail-table h4 { margin-top: 1rem; }
+
+/* Status badge */
+.badge {
+  display: inline-block;
+  padding: .2rem .7rem;
+  border-radius: 20px;
+  font-size: .85rem;
+  font-weight: 600;
+}
+.badge-pending { background: #fff3cd; color: #856404; }
+.badge-approved { background: #d4edda; color: #155724; }
+.badge-rejected { background: #f8d7da; color: #721c24; }
+.badge-default { background: #e2e3e5; color: #383d41; }

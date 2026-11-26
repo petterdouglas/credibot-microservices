@@ -1,23 +1,14 @@
-# Stage 1: Build (Vite gera arquivos estaticos)
-FROM node:20-alpine AS builder
-WORKDIR /build
+FROM nginx:1.27-alpine
 
-# VITE_USE_MOCK=true embute o MSW (frontend roda sem BFFs)
-ARG VITE_USE_MOCK=false
-ENV VITE_USE_MOCK=$VITE_USE_MOCK
+# Remove a config padrão
+RUN rm /etc/nginx/conf.d/default.conf
 
-COPY package*.json ./
-RUN mkdir -p public && npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
-
-COPY . .
-RUN npm run build
-
-# Stage 2: Runtime (somente Nginx + estaticos; sem Node, sem codigo-fonte)
-FROM nginx:1.27-alpine AS runtime
+# Copia a configuração customizada
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /build/dist /usr/share/nginx/html
+
+# Copia os arquivos estáticos
+COPY index.html /usr/share/nginx/html/
+COPY style.css  /usr/share/nginx/html/
+COPY app.js     /usr/share/nginx/html/
 
 EXPOSE 80
-
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://127.0.0.1:80/ || exit 1

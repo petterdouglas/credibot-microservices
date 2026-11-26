@@ -1,12 +1,93 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CrediBot</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CrediBot — Área do Cliente</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ====== LOGIN ====== -->
+  <section id="login-section" class="page active">
+    <div class="card card-narrow">
+      <h1>🤖 CrediBot</h1>
+      <p class="subtitle">Área do Cliente</p>
+      <form id="login-form">
+        <label for="customerId">ID do Cliente</label>
+        <input type="text" id="customerId" placeholder="ex: c-001" required />
+        <button type="submit">Entrar</button>
+      </form>
+      <p id="login-error" class="error hidden"></p>
+    </div>
+  </section>
+
+  <!-- ====== DASHBOARD ====== -->
+  <section id="dashboard-section" class="page hidden">
+    <nav class="topbar">
+      <span class="brand">🤖 CrediBot</span>
+      <div class="nav-links">
+        <a href="#" data-page="dashboard" class="active">Dashboard</a>
+        <a href="#" data-page="new-loan">Novo Empréstimo</a>
+        <a href="#" data-page="chat">Chat IA</a>
+      </div>
+      <button id="btn-logout" class="btn-link">Sair</button>
+    </nav>
+
+    <!-- SUB-PAGE: Dashboard -->
+    <div id="page-dashboard" class="content active">
+      <h2>Olá, <span id="dash-name">—</span>!</h2>
+      <div class="stats-row">
+        <div class="stat-card">
+          <span class="stat-label">Saldo da Carteira</span>
+          <span id="dash-balance" class="stat-value">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Empréstimo Ativo</span>
+          <span id="dash-loan-status" class="stat-value">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Valor</span>
+          <span id="dash-loan-amount" class="stat-value">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Taxa</span>
+          <span id="dash-loan-rate" class="stat-value">—</span>
+        </div>
+      </div>
+      <button id="btn-refresh-dash" class="btn-secondary">Atualizar</button>
+    </div>
+
+    <!-- SUB-PAGE: Novo empréstimo -->
+    <div id="page-new-loan" class="content hidden">
+      <h2>Solicitar Empréstimo</h2>
+      <form id="loan-form" class="card card-narrow">
+        <label for="loan-amount">Valor (R$)</label>
+        <input type="number" id="loan-amount" min="1" step="0.01" placeholder="5000.00" required />
+        <label for="loan-installments">Parcelas</label>
+        <input type="number" id="loan-installments" min="1" step="1" placeholder="12" required />
+        <button type="submit">Solicitar</button>
+      </form>
+      <div id="loan-result" class="hidden">
+        <div class="card">
+          <p><strong>ID:</strong> <span id="loan-res-id"></span></p>
+          <p><strong>Status:</strong> <span id="loan-res-status"></span></p>
+          <p><strong>Mensagem:</strong> <span id="loan-res-msg"></span></p>
+        </div>
+      </div>
+      <p id="loan-error" class="error hidden"></p>
+    </div>
+
+    <!-- SUB-PAGE: Chat IA -->
+    <div id="page-chat" class="content hidden">
+      <h2>Assistente IA</h2>
+      <div id="chat-messages" class="chat-box"></div>
+      <form id="chat-form" class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Digite sua pergunta…" maxlength="1000" required />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
 </html>
