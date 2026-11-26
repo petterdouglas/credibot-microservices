@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
+import authRouter from "./routes/auth.js";
 import dashboardRouter from "./routes/dashboard.js";
 import loansRouter from "./routes/loans.js";
 import chatRouter from "./routes/chat.js";
@@ -14,6 +15,7 @@ app.get("/health", (_req: Request, res: Response) => {
 });
 
 // O Nginx remove o prefixo /web antes de encaminhar para cá.
+app.use("/auth", authRouter);
 app.use("/dashboard", dashboardRouter);
 app.use("/loans", loansRouter);
 app.use("/chat", chatRouter);
