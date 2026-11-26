@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
+import { setTimeout as wait } from "node:timers/promises";
 
 const mode = process.argv[2] ?? "offline";
 assert.ok(["offline", "live", "error"].includes(mode), "Use offline, live ou error.");
@@ -28,12 +29,18 @@ const questions = [
   ["Qual a previsão meteorológica para Marte?", null, /não encontrei|não tenho|não há|insuficiente|fora/i],
 ];
 
-async function measure(chain, message, expectedAnswer, repetitions) {
+async function measure(chain, message, expectedAnswer, repetitions, requireModel = false) {
   const samples = [];
   let result;
   for (let i = 0; i < repetitions; i++) {
-    const started = performance.now();
+    let started = performance.now();
     result = await chain.invoke({ customerId: "C-AVALIACAO", message });
+    if (requireModel && result.responseMode !== "llm") {
+      console.warn("O modelo entrou em fallback. Repetindo o caso após o intervalo do provedor.");
+      await wait(31_000);
+      started = performance.now();
+      result = await chain.invoke({ customerId: "C-AVALIACAO", message });
+    }
     samples.push(Number((performance.now() - started).toFixed(2)));
   }
   return { ...result, answerMatches: expectedAnswer.test(result.reply), samples };
@@ -52,8 +59,9 @@ if (mode === "error") {
   const rows = [];
   for (const [message, expectedSource, expectedAnswer] of questions) {
     const repetitions = mode === "live" ? 1 : 20;
-    const rag = await measure(chains.rag, message, expectedAnswer, repetitions);
-    const baseline = await measure(chains.baseline, message, expectedAnswer, repetitions);
+    const requireModel = mode === "live" && Boolean(expectedSource);
+    const rag = await measure(chains.rag, message, expectedAnswer, repetitions, requireModel);
+    const baseline = await measure(chains.baseline, message, expectedAnswer, repetitions, requireModel);
     assert.deepEqual(baseline.contextSources, []);
     if (mode === "live" && expectedSource) {
       assert.equal(rag.responseMode, "llm", "O caso RAG entrou em fallback: " + message);
