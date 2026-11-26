@@ -32,7 +32,7 @@ export async function callService<T>(
 
     let responseBody: unknown;
     const contentType = response.headers.get("content-type") ?? "";
-    if (contentType.includes("application/json")) {
+    if (/[/+]json/.test(contentType)) {
       responseBody = await response.json();
     } else {
       responseBody = await response.text();
