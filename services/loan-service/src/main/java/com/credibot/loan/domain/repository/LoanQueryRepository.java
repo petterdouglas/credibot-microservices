@@ -7,6 +7,7 @@ import com.credibot.loan.domain.model.Loan;
 import com.credibot.loan.domain.model.LoanStatus;
 
 public interface LoanQueryRepository {
+    void save(Loan loan);
     Optional<Loan> findById(String loanId);
     List<Loan> findByFilters(String customerId, LoanStatus status, int page, int size);
     long countByFilters(String customerId, LoanStatus status);

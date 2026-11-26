@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.credibot.loan.domain.exception.InvalidLoanStateTransitionException;
+
 import lombok.Getter;
 
 @Getter
@@ -65,7 +67,7 @@ public class Loan {
 
     private void transitionTo(LoanStatus nextStatus) {
         if (!this.status.canTransitionTo(nextStatus)) {
-            throw new IllegalStateException("Transição inválida de " + this.status + " para " + nextStatus);
+            throw new InvalidLoanStateTransitionException(this.status, nextStatus);
         }
         this.status = nextStatus;
         this.updatedAt = Instant.now();
