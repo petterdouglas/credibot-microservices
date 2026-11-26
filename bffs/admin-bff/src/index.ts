@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
+import authRouter from "./routes/auth.js";
 import loansRouter from "./routes/loans.js";
 
 const app = express();
@@ -12,6 +13,7 @@ app.get("/health", (_req: Request, res: Response) => {
 });
 
 // O Nginx remove o prefixo /admin antes de encaminhar para cá.
+app.use("/auth", authRouter);
 app.use("/loans", loansRouter);
 
 app.use((req: Request, res: Response) => {
