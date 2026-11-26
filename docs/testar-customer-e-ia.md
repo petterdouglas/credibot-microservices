@@ -33,6 +33,8 @@ npm.cmd start
 
 Para usar OpenAI, defina `LLM_PROVIDER=openai` no ambiente e use a chave correspondente. `LLM_MODEL` permite selecionar um modelo disponível na sua conta. No Compose, configure as mesmas variáveis no arquivo local `.env` e recrie o assistente com `docker compose up -d --build ai-assistant-service`.
 
+Com a chave configurada, o assistente usa embeddings semânticos do provedor para recuperar trechos da base. Se o provedor estiver indisponível, a busca usa vetores locais calculados a partir das palavras da pergunta.
+
 Na API direta, `responseMode: llm` confirma que o provedor gerou o texto. `local` indica resposta com trechos dos manuais e `tool` indica retorno da consulta ao Loan Service. As respostas sobre o estado de um empréstimo usam os dados do serviço transacional.
 
 ## Testar a integração via Docker Compose

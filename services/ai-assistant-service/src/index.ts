@@ -1,5 +1,6 @@
 import http, { IncomingMessage, ServerResponse } from "node:http";
 import { chat } from "./assistant";
+import { providerEmbeddings } from "./embeddings";
 import { Knowledge, loadKnowledge } from "./knowledge";
 
 class RequestError extends Error {
@@ -31,7 +32,7 @@ async function readBody(request: IncomingMessage) {
 }
 
 async function start() {
-  const knowledge = new Knowledge(await loadKnowledge(), process.env.CHROMA_URL);
+  const knowledge = new Knowledge(await loadKnowledge(), process.env.CHROMA_URL, providerEmbeddings());
   const port = Number(process.env.PORT ?? 3003);
   const bind = process.env.SERVER_ADDRESS ?? "127.0.0.1";
   const server = http.createServer(async (req, res) => {
