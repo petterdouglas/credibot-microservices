@@ -70,6 +70,7 @@ $$(".nav-links a").forEach((a) => {
   a.addEventListener("click", (e) => {
     e.preventDefault();
     showPage(a.dataset.page);
+    if (a.dataset.page === "list") loadLoans();
   });
 });
 
@@ -96,6 +97,8 @@ $("#login-form").addEventListener("submit", async (e) => {
     $("#login-section").classList.add("hidden");
     $("#panel-section").classList.remove("hidden");
     $("#panel-section").classList.add("active");
+    showPage("list");
+    loadLoans();
   } catch (err) {
     showError(errorEl, err.message);
   }
@@ -213,3 +216,63 @@ $("#review-form").addEventListener("submit", async (e) => {
     showError(errorEl, err.message);
   }
 });
+
+// ===================== Listagem =====================
+
+let listPage = 0;
+let listTotalPages = 1;
+
+async function loadLoans() {
+  const errorEl = $("#list-error");
+  hideError(errorEl);
+  const tbody = $("#list-table tbody");
+  tbody.innerHTML = "";
+
+  const status = $("#list-status").value;
+  const qs = new URLSearchParams({ page: listPage, size: 10 });
+  if (status) qs.set("status", status);
+
+  try {
+    const data = await api(`/loans?${qs}`);
+    listTotalPages = Math.max(data.totalPages, 1);
+    $("#page-info").textContent = `Página ${data.page + 1} de ${listTotalPages} (${data.totalElements} no total)`;
+
+    data.content.forEach((l) => {
+      const tr = document.createElement("tr");
+      [l.id, l.customerId, formatBRL(l.amount)].forEach((v) => {
+        const td = document.createElement("td");
+        td.textContent = v;
+        tr.appendChild(td);
+      });
+      const tdStatus = document.createElement("td");
+      tdStatus.innerHTML = statusBadge(l.status); // vem do enum do backend
+      tr.appendChild(tdStatus);
+      const tdDate = document.createElement("td");
+      tdDate.textContent = formatDate(l.createdAt);
+      tr.appendChild(tdDate);
+
+      const tdBtn = document.createElement("td");
+      const btn = document.createElement("button");
+      btn.className = "btn-view";
+      btn.textContent = "Ver detalhes";
+      btn.addEventListener("click", () => openAudit(l.id));
+      tdBtn.appendChild(btn);
+      tr.appendChild(tdBtn);
+
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    showError(errorEl, err.message);
+  }
+}
+
+function openAudit(loanId) {
+  showPage("audit");
+  $("#audit-loan-id").value = loanId;
+  $("#review-loan-id").value = loanId; // já deixa pronto para revisão
+  $("#audit-form").requestSubmit();
+}
+
+$("#btn-list-filter").addEventListener("click", () => { listPage = 0; loadLoans(); });
+$("#btn-prev").addEventListener("click", () => { if (listPage > 0) { listPage--; loadLoans(); } });
+$("#btn-next").addEventListener("click", () => { if (listPage + 1 < listTotalPages) { listPage++; loadLoans(); } });

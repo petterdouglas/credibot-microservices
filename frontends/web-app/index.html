@@ -29,6 +29,7 @@
         <a href="#" data-page="dashboard" class="active">Dashboard</a>
         <a href="#" data-page="new-loan">Novo Empréstimo</a>
         <a href="#" data-page="chat">Chat IA</a>
+        <a href="#" data-page="my-loans">Meus Empréstimos</a>
       </div>
       <button id="btn-logout" class="btn-link">Sair</button>
     </nav>
@@ -58,7 +59,7 @@
     </div>
 
     <!-- SUB-PAGE: Novo empréstimo -->
-    <div id="page-new-loan" class="content hidden">
+    <div id="page-new-loan" class="content">
       <h2>Solicitar Empréstimo</h2>
       <form id="loan-form" class="card card-narrow">
         <label for="loan-amount">Valor (R$)</label>
@@ -77,8 +78,19 @@
       <p id="loan-error" class="error hidden"></p>
     </div>
 
+    <!-- SUB-PAGE: Meus empréstimo -->
+    <div id="page-my-loans" class="content">
+      <h2>Meus Empréstimos</h2>
+      <table class="loans-table">
+        <thead><tr><th>ID</th><th>Valor</th><th>Status</th><th>Data</th></tr></thead>
+        <tbody id="loans-tbody"></tbody>
+      </table>
+      <p id="loans-empty" class="hidden">Você ainda não tem empréstimos.</p>
+      <button id="btn-refresh-loans" class="btn-secondary">Atualizar</button>
+    </div>
+
     <!-- SUB-PAGE: Chat IA -->
-    <div id="page-chat" class="content hidden">
+    <div id="page-chat" class="content">
       <h2>Assistente IA</h2>
       <div id="chat-messages" class="chat-box"></div>
       <form id="chat-form" class="chat-input-row">

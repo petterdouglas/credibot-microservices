@@ -21,6 +21,15 @@ export interface LoanDetailResponse {
   _links?: Record<string, { href: string; method: string }>;
 }
 
+/** Loan Service — GET /api/v1/loans */
+export interface LoanListResponse {
+  content: Array<{ id: string; customerId: string; amount: number; status: string; createdAt: string }>;
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 /** Customer Service — GET /api/v1/customers/{id} */
 export interface CustomerProfileResponse {
   id: string;

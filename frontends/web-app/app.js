@@ -56,6 +56,7 @@ $$(".nav-links a").forEach((a) => {
     e.preventDefault();
     showPage(a.dataset.page);
     if (a.dataset.page === "dashboard") loadDashboard();
+    if (a.dataset.page === "my-loans") loadMyLoans();
   });
 });
 
@@ -146,10 +147,51 @@ $("#loan-form").addEventListener("submit", async (e) => {
     $("#loan-res-msg").textContent = data.message;
     resultEl.classList.remove("hidden");
     $("#loan-form").reset();
+    pollLoan(data.loanId);
   } catch (err) {
     showError(errorEl, err.message);
   }
 });
+
+// ===================== Meus Empréstimos =====================
+
+async function loadMyLoans() {
+  const tbody = $("#loans-tbody");
+  tbody.innerHTML = "";
+  try {
+    const { content } = await api("/loans");
+    $("#loans-empty").classList.toggle("hidden", content.length > 0);
+    content.forEach((l) => {
+      const tr = document.createElement("tr");
+      [l.id, formatBRL(l.amount), l.status, new Date(l.createdAt).toLocaleString("pt-BR")]
+        .forEach((v) => {
+          const td = document.createElement("td");
+          td.textContent = v;
+          tr.appendChild(td);
+        });
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+$("#btn-refresh-loans").addEventListener("click", loadMyLoans);
+
+// Consulta o read model até o status sair de PROCESSANDO (SAGA concluída)
+async function pollLoan(loanId, tries = 15) {
+  for (let i = 0; i < tries; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      const { content } = await api("/loans");
+      const loan = content.find((l) => l.id === loanId);
+      if (loan) {
+        $("#loan-res-status").textContent = loan.status;
+        if (loan.status !== "PROCESSANDO") return;
+      }
+    } catch { /* tenta de novo */ }
+  }
+}
 
 // ===================== Chat IA =====================
 
@@ -170,13 +212,24 @@ $("#chat-form").addEventListener("submit", async (e) => {
   addChatBubble(message, "user");
   input.value = "";
 
+  const btn = $("#chat-form button");
+  btn.disabled = true;
+  const typing = document.createElement("div");
+  typing.className = "chat-bubble bot";
+  typing.textContent = "Digitando…";
+  $("#chat-messages").appendChild(typing);
+
   try {
     const data = await api("/chat", {
       method: "POST",
       body: { message },
     });
-    addChatBubble(data.reply, "bot");
+    typing.remove();
+    addChatBubble(data?.reply || "Não consegui responder agora. Tente novamente em instantes.", "bot");
   } catch (err) {
+    typing.remove();
     addChatBubble(`Erro: ${err.message}`, "bot");
+  } finally {
+    btn.disabled = false;
   }
 });

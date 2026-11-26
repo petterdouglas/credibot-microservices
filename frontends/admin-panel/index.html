@@ -28,15 +28,41 @@
     <nav class="topbar">
       <span class="brand">🛡️ CrediBot Admin</span>
       <div class="nav-links">
-        <a href="#" data-page="audit" class="active">Consultar Empréstimo</a>
+        <a href="#" data-page="list" class="active">Empréstimos</a>
+        <a href="#" data-page="audit">Consultar Empréstimo</a>
         <a href="#" data-page="review">Revisar Empréstimo</a>
       </div>
       <span id="officer-name" class="officer-label"></span>
       <button id="btn-logout" class="btn-link">Sair</button>
     </nav>
 
+    <div id="page-list" class="content active">
+      <h2>Empréstimos</h2>
+      <div class="search-row">
+        <select id="list-status">
+          <option value="">Todos os status</option>
+          <option value="PENDING">PENDING</option>
+          <option value="APPROVED">APPROVED</option>
+          <option value="REJECTED">REJECTED</option>
+          <option value="CANCELED">CANCELED</option>
+          <option value="CANCELED_DUE_TO_ERROR">CANCELED_DUE_TO_ERROR</option>
+        </select>
+        <button id="btn-list-filter" type="button" class="btn-primary">Filtrar</button>
+      </div>
+      <p id="list-error" class="error hidden"></p>
+      <table class="detail-table" id="list-table">
+        <thead><tr><th>ID</th><th>Cliente</th><th>Valor</th><th>Status</th><th>Criado em</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="pager">
+        <button id="btn-prev" type="button">‹ Anterior</button>
+        <span id="page-info"></span>
+        <button id="btn-next" type="button">Próxima ›</button>
+      </div>
+    </div>
+
     <!-- SUB-PAGE: Audit -->
-    <div id="page-audit" class="content active">
+    <div id="page-audit" class="content">
       <h2>Consultar Empréstimo</h2>
       <form id="audit-form" class="search-row">
         <input type="text" id="audit-loan-id" placeholder="ID do Empréstimo (UUID)" required />
@@ -103,7 +129,7 @@
     </div>
 
     <!-- SUB-PAGE: Review -->
-    <div id="page-review" class="content hidden">
+    <div id="page-review" class="content">
       <h2>Revisar Empréstimo</h2>
       <form id="review-form" class="card card-narrow">
         <label for="review-loan-id">ID do Empréstimo</label>

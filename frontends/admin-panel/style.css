@@ -148,3 +148,8 @@ button[type="submit"]:hover { background: #1a252f; }
 .badge-approved { background: #d4edda; color: #155724; }
 .badge-rejected { background: #f8d7da; color: #721c24; }
 .badge-default { background: #e2e3e5; color: #383d41; }
+
+#list-table td:first-child { width: auto; font-family: monospace; font-size: .8rem; }
+.search-row .btn-primary { width: auto; margin-top: 0; padding: .65rem 1.5rem; }
+.pager { display: flex; gap: 1rem; align-items: center; justify-content: center; margin-top: 1rem; }
+.pager button, .btn-view { padding: .4rem .9rem; border: 1px solid #2c3e50; background: #fff; border-radius: 6px; }

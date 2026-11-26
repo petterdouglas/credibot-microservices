@@ -171,3 +171,7 @@ button:disabled { opacity: .6; cursor: not-allowed; }
   padding: .65rem 1.5rem;
   margin-top: 0;
 }
+
+.loans-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; margin-top: 1rem; }
+.loans-table th, .loans-table td { padding: .6rem .8rem; border-bottom: 1px solid #eee; text-align: left; font-size: .9rem; }
+.loans-table th { background: #f7f7fb; font-weight: 600; }

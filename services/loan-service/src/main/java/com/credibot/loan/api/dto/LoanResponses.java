@@ -24,12 +24,14 @@ public final class LoanResponses {
     ) {}
 
     public record LoanStatusResponse(
-            String id,
-            String customerId,
-            BigDecimal amount,
-            LoanStatus status,
-            Instant updatedAt,
-            @JsonProperty("_links") Map<String, HateoasLink> links
+        String id,
+        String customerId,
+        BigDecimal amount,
+        Integer installments,
+        LoanStatus status,
+        Instant createdAt,
+        Instant updatedAt,
+        @JsonProperty("_links") Map<String, HateoasLink> links
     ) {}
 
     public record LoanSummaryItem(

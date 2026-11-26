@@ -45,7 +45,9 @@ public class LoanModelAssembler {
                 loan.getId(),
                 loan.getCustomerId(),
                 loan.getAmount(),
+                loan.getInstallments(),
                 loan.getStatus(),
+                loan.getCreatedAt(),
                 loan.getUpdatedAt(),
                 links
         );
