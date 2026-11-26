@@ -1,3 +1,4 @@
+import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { Knowledge } from "./knowledge";
@@ -76,25 +77,39 @@ async function generate(message: string, context: string): Promise<string | unde
   }
 }
 
-export async function chat(knowledge: Knowledge, customerId: string, message: string) {
-  const loanId = message.match(/\bL-[a-z0-9_-]{1,62}\b/i)?.[0];
-  const query = message.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-  const statusIntent = loanId || /\b(status|andamento|situacao|aprovad[oa]|rejeitad[oa]|cancelad[oa])\b/.test(query)
+type ChatInput = { customerId: string; message: string };
+
+function classify(input: ChatInput) {
+  const loanId = input.message.match(/\bL-[a-z0-9_-]{1,62}\b/i)?.[0];
+  const query = input.message.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+  const statusIntent = Boolean(loanId) || /\b(status|andamento|situacao|aprovad[oa]|rejeitad[oa]|cancelad[oa])\b/.test(query)
     || /\b(meu|minha)\s+(credito|emprestimo|solicitacao|proposta)\b/.test(query);
   const knowledgeIntent = !statusIntent || /\b(taxas?|juros|cet|parcelas?|carteira|saldo|deposito)\b/.test(query);
-  const [entries, status] = await Promise.all([
-    knowledgeIntent ? knowledge.retrieve(message) : [],
-    statusIntent ? loanTool(customerId).invoke({ loanId }) : undefined,
-  ]);
+  return { ...input, loanId, statusIntent, knowledgeIntent };
+}
 
-  const context = entries.map((entry) => entry.text).join("\n\n");
-  const generated = context ? await generate(message, context) : undefined;
-  const guidance = generated ?? context;
-  return {
-    reply: [guidance, status].filter(Boolean).join("\n\n")
-      || "Não encontrei essa informação na base do CrediBot. Posso ajudar com juros, parcelas, carteira ou status de empréstimos.",
-    responseMode: generated ? "llm" : context ? "local" : status ? "tool" : "no_context",
-    contextSources: entries.map((entry) => entry.source),
-    toolsInvoked: statusIntent ? ["get_loan_status"] : [],
-  };
+export function createChatChain(knowledge: Knowledge, mode: "rag" | "no-rag" = "rag") {
+  return RunnableSequence.from([
+    RunnableLambda.from(classify),
+    RunnableLambda.from(async (input: ReturnType<typeof classify>) => {
+      const [entries, status] = await Promise.all([
+        input.knowledgeIntent && mode === "rag" ? knowledge.retrieve(input.message) : [],
+        input.statusIntent ? loanTool(input.customerId).invoke({ loanId: input.loanId }) : undefined,
+      ]);
+      return { ...input, entries, status };
+    }),
+    RunnableLambda.from(async ({ message, entries, status, statusIntent, knowledgeIntent }) => {
+      const context = entries.map((entry: { text: string }) => entry.text).join("\n\n");
+      const generated = context || (mode === "no-rag" && knowledgeIntent)
+        ? await generate(message, context)
+        : undefined;
+      return {
+        reply: [generated ?? context, status].filter(Boolean).join("\n\n")
+          || "Não encontrei essa informação na base do CrediBot. Posso ajudar com juros, parcelas, carteira ou status de empréstimos.",
+        responseMode: generated ? "llm" : context ? "local" : status ? "tool" : "no_context",
+        contextSources: entries.map((entry: { source: string }) => entry.source),
+        toolsInvoked: statusIntent ? ["get_loan_status"] : [],
+      };
+    }),
+  ]);
 }

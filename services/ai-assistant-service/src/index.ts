@@ -1,5 +1,5 @@
 import http, { IncomingMessage, ServerResponse } from "node:http";
-import { chat } from "./assistant";
+import { createChatChain } from "./assistant";
 import { providerEmbeddings } from "./embeddings";
 import { Knowledge, loadKnowledge } from "./knowledge";
 
@@ -33,6 +33,7 @@ async function readBody(request: IncomingMessage) {
 
 async function start() {
   const knowledge = new Knowledge(await loadKnowledge(), process.env.CHROMA_URL, providerEmbeddings());
+  const assistant = createChatChain(knowledge);
   const port = Number(process.env.PORT ?? 3003);
   const bind = process.env.SERVER_ADDRESS ?? "127.0.0.1";
   const server = http.createServer(async (req, res) => {
@@ -51,7 +52,7 @@ async function start() {
           || typeof body?.message !== "string" || !body.message.trim() || body.message.length > 1000) {
         throw new RequestError(400, "Informe customerId e uma mensagem entre 1 e 1000 caracteres.");
       }
-      send(res, 200, await chat(knowledge, body.customerId, body.message.trim()));
+      send(res, 200, await assistant.invoke({ customerId: body.customerId, message: body.message.trim() }));
     } catch (error) {
       const status = error instanceof RequestError ? error.status : 500;
       const detail = error instanceof RequestError ? error.message : "Não consegui responder agora.";
