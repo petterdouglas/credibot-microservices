@@ -11,12 +11,29 @@ import {
   CustomerAuditSection,
   CreditAnalysisSection,
   FinancialsSection,
+  LoanListResponse,
 } from "../types.js";
 
 const router = Router();
 
 // Taxa aplicada pela plataforma (campo ainda não retornado pelo loan-service).
 const APPLIED_INTEREST_RATE = "2.5%";
+
+// GET /loans?status=&page=&size= — Fila de trabalho do analista (read model CQRS).
+router.get("/", requireAdminAuth, async (req: Request, res: Response) => {
+  const { status, page = "0", size = "10" } = req.query as Record<string, string | undefined>;
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+
+  try {
+    const data = await callService<LoanListResponse>(
+      `${process.env.LOAN_SERVICE_URL}/api/v1/loans?${params}`
+    );
+    res.status(200).json(data); // backoffice: inclui customerId
+  } catch (err) {
+    handleUpstreamError(res, req, err, "loan-service");
+  }
+});
 
 // GET /loans/:id — Visão de auditoria completa do empréstimo para analistas.
 // Agrega loan-service, customer-service e credit-analysis-service.

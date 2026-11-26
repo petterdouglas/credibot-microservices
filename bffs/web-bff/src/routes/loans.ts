@@ -3,6 +3,8 @@ import { requireAuth } from "../auth.js";
 import { callService } from "../httpClient.js";
 import { handleUpstreamError, sendProblem } from "../errors.js";
 import { LoanCreatedResponse, LoanRequestedPayload } from "../types.js";
+import { LoanListResponse } from "../types.js";
+import { translateStatus } from "../status.js";
 
 const router = Router();
 
@@ -60,6 +62,28 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     };
 
     res.status(201).json(payload);
+  } catch (err) {
+    handleUpstreamError(res, req, err, "loan-service");
+  }
+});
+
+router.get("/", requireAuth, async (req: Request, res: Response) => {
+  const customerId = req.jwtPayload!.sub;
+  const loanUrl = process.env.LOAN_SERVICE_URL!;
+
+  try {
+    const upstream = await callService<LoanListResponse>(
+      `${loanUrl}/api/v1/loans?customerId=${encodeURIComponent(customerId)}&page=0&size=20`
+    );
+    // Payload leve: sem customerId nem campos internos.
+    res.status(200).json({
+      content: upstream.content.map((l) => ({
+        id: l.id,
+        amount: l.amount,
+        status: translateStatus(l.status),
+        createdAt: l.createdAt,
+      })),
+    });
   } catch (err) {
     handleUpstreamError(res, req, err, "loan-service");
   }

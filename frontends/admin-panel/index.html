@@ -1,12 +1,163 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CrediBot · Mesa de crédito</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CrediBot — Painel Administrativo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ====== LOGIN ADMIN ====== -->
+  <section id="login-section" class="page active">
+    <div class="card card-narrow">
+      <h1>🛡️ CrediBot Admin</h1>
+      <p class="subtitle">Painel de Análise de Crédito</p>
+      <form id="login-form">
+        <label for="officerId">Usuário</label>
+        <input type="text" id="officerId" placeholder="admin" required />
+        <label for="password">Senha</label>
+        <input type="password" id="password" placeholder="••••••" required />
+        <button type="submit">Entrar</button>
+      </form>
+      <p id="login-error" class="error hidden"></p>
+    </div>
+  </section>
+
+  <!-- ====== PAINEL ====== -->
+  <section id="panel-section" class="page hidden">
+    <nav class="topbar">
+      <span class="brand">🛡️ CrediBot Admin</span>
+      <div class="nav-links">
+        <a href="#" data-page="list" class="active">Empréstimos</a>
+        <a href="#" data-page="audit">Consultar Empréstimo</a>
+        <a href="#" data-page="review">Revisar Empréstimo</a>
+      </div>
+      <span id="officer-name" class="officer-label"></span>
+      <button id="btn-logout" class="btn-link">Sair</button>
+    </nav>
+
+    <div id="page-list" class="content active">
+      <h2>Empréstimos</h2>
+      <div class="search-row">
+        <select id="list-status">
+          <option value="">Todos os status</option>
+          <option value="PENDING">PENDING</option>
+          <option value="APPROVED">APPROVED</option>
+          <option value="REJECTED">REJECTED</option>
+          <option value="CANCELED">CANCELED</option>
+          <option value="CANCELED_DUE_TO_ERROR">CANCELED_DUE_TO_ERROR</option>
+        </select>
+        <button id="btn-list-filter" type="button" class="btn-primary">Filtrar</button>
+      </div>
+      <p id="list-error" class="error hidden"></p>
+      <table class="detail-table" id="list-table">
+        <thead><tr><th>ID</th><th>Cliente</th><th>Valor</th><th>Status</th><th>Criado em</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="pager">
+        <button id="btn-prev" type="button">‹ Anterior</button>
+        <span id="page-info"></span>
+        <button id="btn-next" type="button">Próxima ›</button>
+      </div>
+    </div>
+
+    <!-- SUB-PAGE: Audit -->
+    <div id="page-audit" class="content">
+      <h2>Consultar Empréstimo</h2>
+      <form id="audit-form" class="search-row">
+        <input type="text" id="audit-loan-id" placeholder="ID do Empréstimo (UUID)" required />
+        <button type="submit">Buscar</button>
+      </form>
+      <p id="audit-error" class="error hidden"></p>
+
+      <div id="audit-result" class="hidden">
+        <!-- Dados do empréstimo -->
+        <div class="card section-card">
+          <h3>📋 Empréstimo</h3>
+          <table class="detail-table">
+            <tr><td>ID</td><td id="a-loan-id"></td></tr>
+            <tr><td>Status</td><td id="a-loan-status"></td></tr>
+            <tr><td>Criado em</td><td id="a-loan-created"></td></tr>
+            <tr><td>Atualizado em</td><td id="a-loan-updated"></td></tr>
+          </table>
+        </div>
+
+        <!-- Financeiro -->
+        <div class="card section-card">
+          <h3>💰 Financeiro</h3>
+          <table class="detail-table">
+            <tr><td>Valor Solicitado</td><td id="a-fin-amount"></td></tr>
+            <tr><td>Parcelas</td><td id="a-fin-installments"></td></tr>
+            <tr><td>Taxa de Juros</td><td id="a-fin-rate"></td></tr>
+          </table>
+        </div>
+
+        <!-- Cliente -->
+        <div class="card section-card">
+          <h3>👤 Cliente</h3>
+          <table class="detail-table">
+            <tr><td>ID</td><td id="a-cust-id"></td></tr>
+            <tr><td>Nome</td><td id="a-cust-name"></td></tr>
+            <tr><td>E-mail</td><td id="a-cust-email"></td></tr>
+            <tr><td>CPF</td><td id="a-cust-cpf"></td></tr>
+            <tr><td>Renda Mensal</td><td id="a-cust-income"></td></tr>
+            <tr><td>KYC</td><td id="a-cust-kyc"></td></tr>
+            <tr><td>Conta Bloqueada</td><td id="a-cust-blocked"></td></tr>
+          </table>
+        </div>
+
+        <!-- Análise de Crédito -->
+        <div class="card section-card">
+          <h3>📊 Análise de Crédito</h3>
+          <div id="a-credit-none" class="muted">Análise ainda não disponível (empréstimo em processamento).</div>
+          <div id="a-credit-data" class="hidden">
+            <table class="detail-table">
+              <tr><td>Score de Risco</td><td id="a-credit-score"></td></tr>
+              <tr><td>Decisão</td><td id="a-credit-decision"></td></tr>
+              <tr><td>Versão do Modelo</td><td id="a-credit-model"></td></tr>
+              <tr><td>Motivo</td><td id="a-credit-reason"></td></tr>
+              <tr><td>Avaliado em</td><td id="a-credit-date"></td></tr>
+            </table>
+            <h4>Fatores</h4>
+            <table class="detail-table" id="a-credit-factors">
+              <thead><tr><th>Fator</th><th>Peso</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB-PAGE: Review -->
+    <div id="page-review" class="content">
+      <h2>Revisar Empréstimo</h2>
+      <form id="review-form" class="card card-narrow">
+        <label for="review-loan-id">ID do Empréstimo</label>
+        <input type="text" id="review-loan-id" placeholder="UUID" required />
+
+        <label for="review-decision">Decisão</label>
+        <select id="review-decision" required>
+          <option value="">Selecione...</option>
+          <option value="MANUALLY_APPROVED">Aprovar Manualmente</option>
+          <option value="MANUALLY_REJECTED">Rejeitar Manualmente</option>
+        </select>
+
+        <label for="review-justification">Justificativa</label>
+        <textarea id="review-justification" rows="3" placeholder="Motivo da decisão…" required></textarea>
+
+        <button type="submit">Enviar Decisão</button>
+      </form>
+      <p id="review-error" class="error hidden"></p>
+      <div id="review-result" class="hidden">
+        <div class="card">
+          <p><strong>ID:</strong> <span id="r-loan-id"></span></p>
+          <p><strong>Novo Status:</strong> <span id="r-status"></span></p>
+          <p><strong>Revisado por:</strong> <span id="r-reviewed-by"></span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
 </html>

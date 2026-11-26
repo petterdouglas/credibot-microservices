@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { requireAuth } from "../auth.js";
 import { callService } from "../httpClient.js";
 import { handleUpstreamError } from "../errors.js";
+import { translateStatus } from "../status.js";
 import {
   CustomerProfileResponse,
   WalletResponse,
@@ -71,17 +72,6 @@ function selectActiveLoan(loans: LoanListResponse): ActiveLoanSummary | null {
     status: translateStatus(loan.status),
     rate: DISPLAY_RATE,
   };
-}
-
-function translateStatus(status: string): string {
-  const map: Record<string, string> = {
-    PENDING: "PROCESSANDO",
-    APPROVED: "APROVADO",
-    REJECTED: "REJEITADO",
-    CANCELED: "CANCELADO",
-    CANCELED_DUE_TO_ERROR: "CANCELADO",
-  };
-  return map[status] ?? status;
 }
 
 export default router;

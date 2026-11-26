@@ -1,19 +1,11 @@
-# Stage 1: Build (Vite gera arquivos estaticos)
-FROM node:20-alpine AS builder
-WORKDIR /build
-ENV NODE_OPTIONS="--dns-result-order=ipv4first"
-ARG VITE_USE_MOCK=false
-ENV VITE_USE_MOCK=$VITE_USE_MOCK
+FROM nginx:1.27-alpine
 
-COPY package*.json ./
-RUN npm config set maxsockets 3 && mkdir -p public && npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
-COPY . .
-RUN npm run build
-
-# Stage 2: Runtime (somente Nginx + estaticos; sem Node, sem codigo-fonte)
-FROM nginx:1.27-alpine AS runtime
+RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /build/dist /usr/share/nginx/html
+
+COPY index.html /usr/share/nginx/html/
+COPY style.css  /usr/share/nginx/html/
+COPY app.js     /usr/share/nginx/html/
 
 EXPOSE 80
 
