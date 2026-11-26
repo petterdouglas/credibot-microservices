@@ -1,8 +1,9 @@
 # Stage 1: Build
 FROM node:20-alpine AS builder
 WORKDIR /build
+ENV NODE_OPTIONS="--dns-result-order=ipv4first"
 COPY package*.json ./
-RUN npm ci
+RUN npm config set maxsockets 3 && npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 COPY . .
 RUN npm run build
 

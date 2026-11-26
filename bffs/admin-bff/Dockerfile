@@ -7,11 +7,13 @@
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS builder
 WORKDIR /build
+ENV NODE_OPTIONS="--dns-result-order=ipv4first"
 
 # Copia manifests primeiro para aproveitar cache de camadas do Docker.
 # package-lock.json garante instalação determinística via npm ci.
 COPY package.json package-lock.json ./
-RUN npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+RUN npm config set maxsockets 3 \
+    && npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 
 COPY tsconfig.json ./
 COPY src ./src
@@ -24,11 +26,13 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--dns-result-order=ipv4first"
 
 # Instala somente dependências de produção com npm ci + --omit=dev.
 # npm ci é mais rápido e garante reprodutibilidade a partir do lockfile.
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev \
+RUN npm config set maxsockets 3 \
+    && npm ci --omit=dev \
       --fetch-retries=5 \
       --fetch-retry-mintimeout=20000 \
       --fetch-retry-maxtimeout=120000 \
